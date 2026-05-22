@@ -1,0 +1,14 @@
+/home/kaustubh/Devlopment/hackathon/amongsol/challenges/transfer/target/debug/deps/thiserror-f9286f3a6693544e.d: /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/lib.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/aserror.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/display.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/var.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/private.rs /home/kaustubh/Devlopment/hackathon/amongsol/challenges/transfer/target/debug/build/thiserror-7399ea59ce3845b2/out/private.rs
+
+/home/kaustubh/Devlopment/hackathon/amongsol/challenges/transfer/target/debug/deps/libthiserror-f9286f3a6693544e.rlib: /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/lib.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/aserror.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/display.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/var.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/private.rs /home/kaustubh/Devlopment/hackathon/amongsol/challenges/transfer/target/debug/build/thiserror-7399ea59ce3845b2/out/private.rs
+
+/home/kaustubh/Devlopment/hackathon/amongsol/challenges/transfer/target/debug/deps/libthiserror-f9286f3a6693544e.rmeta: /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/lib.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/aserror.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/display.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/var.rs /home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/private.rs /home/kaustubh/Devlopment/hackathon/amongsol/challenges/transfer/target/debug/build/thiserror-7399ea59ce3845b2/out/private.rs
+
+/home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/lib.rs:
+/home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/aserror.rs:
+/home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/display.rs:
+/home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/var.rs:
+/home/kaustubh/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/private.rs:
+/home/kaustubh/Devlopment/hackathon/amongsol/challenges/transfer/target/debug/build/thiserror-7399ea59ce3845b2/out/private.rs:
+
+# env-dep:OUT_DIR=/home/kaustubh/Devlopment/hackathon/amongsol/challenges/transfer/target/debug/build/thiserror-7399ea59ce3845b2/out

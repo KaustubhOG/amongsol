@@ -1,0 +1,13 @@
+[package]
+name = "transfer-challenge"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "transfer_challenge"
+crate-type = ["lib"]
+
+[dev-dependencies]
+litesvm = "0.6"
+solana-sdk = "2.1"
+tokio = { version = "1", features = ["full"] }
