@@ -24,7 +24,8 @@ impl GameManager {
             .next()
             .unwrap_or("UNKNOWN")
             .to_uppercase();
-        self.sessions.insert(id.clone(), GameSession::new(id.clone()));
+        self.sessions
+            .insert(id.clone(), GameSession::new(id.clone()));
         id
     }
 

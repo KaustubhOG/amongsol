@@ -11,108 +11,182 @@ interface EditInfo {
   result: string;
 }
 
+interface Player {
+  color: string;
+  wallet: string;
+  is_host: boolean;
+}
+
+function getInitialMeetingState() {
+  return {
+    roomState: (socket.getLastMessage("GameJoined")?.state as string | undefined) ?? "lobby",
+    editHistory:
+      (socket.getLastMessage("MeetingCalled")?.edit_history as EditInfo[] | undefined) ?? [],
+    callerColor:
+      (socket.getLastMessage("MeetingCalled")?.caller_color as string | undefined) ?? "",
+    players: (socket.getLastMessage("GameJoined")?.players as Player[] | undefined) ?? [],
+  };
+}
+
+function formatTime(timestamp: number) {
+  const date = new Date(timestamp * 1000);
+  return `${date.getMinutes()}:${date.getSeconds().toString().padStart(2, "0")}`;
+}
+
+function formatWallet(wallet: string) {
+  if (wallet.length <= 10) return wallet;
+  return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+}
+
 export default function MeetingPage() {
   const params = useParams();
   const router = useRouter();
   const roomId = params.roomId as string;
-  const [editHistory, setEditHistory] = useState<EditInfo[]>([]);
-  const [chat, setChat] = useState("");
+  const initialState = getInitialMeetingState();
+  const [editHistory, setEditHistory] = useState<EditInfo[]>(initialState.editHistory);
+  const [players, setPlayers] = useState<Player[]>(initialState.players);
+  const [callerColor, setCallerColor] = useState(initialState.callerColor);
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    if (initialState.roomState === "lobby") {
+      router.replace(`/lobby/${roomId}`);
+      return;
+    }
+
+    if (initialState.roomState === "playing" || initialState.roomState === "code_locked") {
+      router.replace(`/game/${roomId}`);
+      return;
+    }
+
+    if (initialState.roomState === "voting") {
+      router.replace(`/vote/${roomId}`);
+      return;
+    }
+
+    if (initialState.roomState === "ended") {
+      router.replace(`/results/${roomId}`);
+      return;
+    }
+
     const unsub = socket.onMessage((msg) => {
+      if (msg.type === "GameJoined") {
+        setPlayers(msg.players as Player[]);
+      }
+
+      if (msg.type === "PlayerJoined" || msg.type === "PlayerLeft") {
+        setPlayers(msg.players as Player[]);
+      }
+
       if (msg.type === "MeetingCalled") {
         setEditHistory(msg.edit_history as EditInfo[]);
+        setCallerColor(msg.caller_color as string);
       }
+
+      if (msg.type === "VotingStarted") {
+        router.push(`/vote/${roomId}`);
+      }
+
       if (msg.type === "GameOver") {
         router.push(`/results/${roomId}`);
       }
+
+      if (msg.type === "Error") {
+        setError(msg.message as string);
+      }
     });
+
     return unsub;
-  }, [roomId, router]);
+  }, [initialState.roomState, roomId, router]);
 
   function handleVote() {
-    router.push(`/vote/${roomId}`);
-  }
-
-  function formatTime(ts: number) {
-    const d = new Date(ts * 1000);
-    return `${d.getMinutes()}:${d.getSeconds().toString().padStart(2, "0")}`;
+    socket.send({ type: "StartVoting" });
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-8 p-8">
-      <div className="flex flex-col items-center gap-1">
-        <h2 className="text-2xl font-bold" style={{ color: "#ff4444" }}>
-          Emergency Meeting
-        </h2>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          discuss and vote · 30 seconds
-        </p>
-      </div>
-
-      <div className="w-96 flex flex-col gap-2">
-        <p
-          className="text-xs font-bold tracking-widest uppercase mb-2"
-          style={{ color: "var(--muted)" }}
-        >
-          Edit History
-        </p>
-        {editHistory.length === 0 && (
-          <p className="text-xs" style={{ color: "var(--muted)" }}>
-            no edits recorded
-          </p>
-        )}
-        {editHistory.map((entry, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-between px-4 py-3 border text-sm"
-            style={{ borderColor: "var(--border)" }}
-          >
-            <div className="flex items-center gap-2">
-              <div
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: entry.cursor_color }}
-              />
-              <span style={{ color: "var(--muted)" }}>[{formatTime(entry.timestamp)}]</span>
-            </div>
-            <span>{entry.function_name}</span>
-            <span style={{ color: entry.result === "pass" ? "var(--green)" : "#ff4444" }}>
-              {entry.result}
+    <main className="min-h-screen px-6 py-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+        <div className="flex items-center justify-between gap-6 border-b pb-5" style={{ borderColor: "var(--border)" }}>
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "#ff4444" }}>
+              Emergency Meeting
             </span>
+            <h1 className="text-3xl font-bold">Review the round</h1>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
+              {callerColor ? `${callerColor} called the meeting` : "meeting active"}
+            </p>
           </div>
-        ))}
-      </div>
 
-      <div className="w-96 flex flex-col gap-2">
-        <p
-          className="text-xs font-bold tracking-widest uppercase mb-2"
-          style={{ color: "var(--muted)" }}
-        >
-          Chat
-        </p>
-        <div
-          className="w-full h-32 border p-3 text-sm"
-          style={{ borderColor: "var(--border)", color: "var(--muted)" }}
-        >
-          use voice or discord to discuss
+          <button
+            onClick={handleVote}
+            className="border px-5 py-3 text-sm font-bold tracking-widest uppercase"
+            style={{ borderColor: "#ff4444", color: "#ff4444" }}
+          >
+            Start Vote
+          </button>
         </div>
-        <input
-          type="text"
-          placeholder="type a message..."
-          value={chat}
-          onChange={(e) => setChat(e.target.value)}
-          className="w-full bg-transparent border px-3 py-2 text-sm outline-none"
-          style={{ borderColor: "var(--border)", color: "var(--text)" }}
-        />
-      </div>
 
-      <button
-        onClick={handleVote}
-        className="w-96 py-3 border text-sm font-bold tracking-widest uppercase"
-        style={{ borderColor: "#ff4444", color: "#ff4444" }}
-      >
-        Proceed to Vote
-      </button>
+        <div className="grid gap-6 lg:grid-cols-[1.35fr_0.85fr]">
+          <section className="flex flex-col gap-3">
+            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+              Edit History
+            </p>
+
+            {editHistory.length === 0 && (
+              <div className="border px-4 py-6 text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
+                no test history recorded yet
+              </div>
+            )}
+
+            {editHistory.map((entry, index) => (
+              <div
+                key={`${entry.cursor_color}-${entry.timestamp}-${index}`}
+                className="grid items-center gap-3 border px-4 py-4 text-sm sm:grid-cols-[auto_1fr_auto_auto]"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.cursor_color }} />
+                  <span className="font-bold">{entry.cursor_color}</span>
+                </div>
+                <span style={{ color: "var(--muted)" }}>{entry.function_name}</span>
+                <span style={{ color: "var(--muted)" }}>{formatTime(entry.timestamp)}</span>
+                <span style={{ color: entry.result === "pass" ? "var(--green)" : "#ff4444" }}>
+                  {entry.result}
+                </span>
+              </div>
+            ))}
+          </section>
+
+          <aside className="flex flex-col gap-4">
+            <div className="border p-4" style={{ borderColor: "var(--border)" }}>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+                Players
+              </p>
+              <div className="mt-3 flex flex-col gap-2">
+                {players.map((player) => (
+                  <div key={player.wallet} className="flex items-center justify-between gap-3 text-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: player.color }} />
+                      <span>{player.color}</span>
+                    </div>
+                    <span style={{ color: "var(--muted)" }}>{formatWallet(player.wallet)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border p-4 text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
+              Compare who touched failing runs, who called the meeting, and who is defending a broken result.
+            </div>
+
+            {error && (
+              <div className="border px-4 py-3 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+                {error}
+              </div>
+            )}
+          </aside>
+        </div>
+      </div>
     </main>
   );
 }

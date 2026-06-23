@@ -1,18 +1,29 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import socket from "@/lib/socket";
 
-interface GameOverMsg {
+interface GameOverState {
   winner: string;
   impostor_color: string;
   impostor_wallet: string;
 }
 
+function getInitialResult() {
+  return (socket.getLastMessage("GameOver") as GameOverState | null) ?? null;
+}
+
+function formatWallet(wallet: string) {
+  if (wallet.length <= 10) return wallet;
+  return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+}
+
 export default function ResultsPage() {
+  const params = useParams();
   const router = useRouter();
-  const [result, setResult] = useState<GameOverMsg | null>(null);
+  const roomId = params.roomId as string;
+  const [result, setResult] = useState<GameOverState | null>(getInitialResult());
 
   useEffect(() => {
     const unsub = socket.onMessage((msg) => {
@@ -27,59 +38,68 @@ export default function ResultsPage() {
     return unsub;
   }, []);
 
+  function handleExit() {
+    socket.disconnect();
+    router.push("/");
+  }
+
+  const civiliansWon = result?.winner === "civilians";
+
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-8 p-8">
-      <div className="flex flex-col items-center gap-2">
-        <p
-          className="text-xs font-bold tracking-widest uppercase"
-          style={{ color: result?.winner === "civilians" ? "var(--green)" : "#ff4444" }}
-        >
-          {result?.winner === "civilians" ? "impostor found" : "impostor wins"}
-        </p>
-        <h2 className="text-3xl font-bold">
-          {result?.winner === "civilians" ? "Civilians Win" : "Impostor Wins"}
-        </h2>
-        {result && (
-          <div className="flex items-center gap-2 mt-1">
-            <div
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: result.impostor_color }}
-            />
-            <p className="text-sm" style={{ color: "var(--muted)" }}>
-              {result.impostor_wallet} was the impostor
+    <main className="min-h-screen px-6 py-8">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-4xl flex-col justify-between gap-8">
+        <div className="flex flex-col gap-4 border-b pb-6" style={{ borderColor: "var(--border)" }}>
+          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: civiliansWon ? "var(--green)" : "#ff4444" }}>
+            {civiliansWon ? "impostor found" : "impostor escaped"}
+          </span>
+          <h1 className="text-4xl font-bold">
+            {civiliansWon ? "Engineers held the line" : "Sabotage succeeded"}
+          </h1>
+          {result && (
+            <div className="flex items-center gap-3 text-sm" style={{ color: "var(--muted)" }}>
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: result.impostor_color }} />
+              <span>{formatWallet(result.impostor_wallet)} was the impostor</span>
+            </div>
+          )}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="border p-5" style={{ borderColor: "var(--border)" }}>
+            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+              Result
+            </p>
+            <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
+              {civiliansWon
+                ? "The final code state passed inspection and the team removed the saboteur."
+                : "The final code state or the vote favored the impostor."}
             </p>
           </div>
+
+          <div className="border p-5" style={{ borderColor: "var(--border)" }}>
+            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+              Room
+            </p>
+            <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
+              {roomId}
+            </p>
+          </div>
+        </div>
+
+        {!result && (
+          <div className="border px-4 py-3 text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
+            waiting for result
+          </div>
         )}
-      </div>
 
-      {!result && (
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
-          waiting for result...
-        </p>
-      )}
-
-      <div
-        className="w-96 px-4 py-3 border text-sm"
-        style={{ borderColor: "var(--border)", color: "var(--muted)" }}
-      >
-        NFT badge minting... bug squasher
-      </div>
-
-      <div className="flex gap-4">
-        <button
-          onClick={() => router.push("/")}
-          className="px-8 py-3 border text-sm font-bold tracking-widest uppercase"
-          style={{ borderColor: "var(--green)", color: "var(--green)" }}
-        >
-          Play Again
-        </button>
-        <button
-          onClick={() => router.push("/")}
-          className="px-8 py-3 border text-sm font-bold tracking-widest uppercase"
-          style={{ borderColor: "var(--border)", color: "var(--muted)" }}
-        >
-          Leave
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={handleExit}
+            className="border px-8 py-3 text-sm font-bold tracking-widest uppercase"
+            style={{ borderColor: "var(--green)", color: "var(--green)" }}
+          >
+            Return Home
+          </button>
+        </div>
       </div>
     </main>
   );

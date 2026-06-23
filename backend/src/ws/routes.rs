@@ -1,8 +1,8 @@
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 
-use crate::AppState;
 use crate::errors::AppError;
+use crate::AppState;
 
 #[derive(Deserialize)]
 pub struct CreateGameRequest {
@@ -28,8 +28,11 @@ pub struct JoinGameResponse {
 
 pub async fn create_game_handler(
     State(state): State<AppState>,
-    Json(_body): Json<CreateGameRequest>,
+    Json(body): Json<CreateGameRequest>,
 ) -> Result<Json<CreateGameResponse>, AppError> {
+    if body.wallet.trim().is_empty() {
+        return Err(AppError::Internal("wallet is required".to_string()));
+    }
     let game_id = state.game_manager.create_game();
     Ok(Json(CreateGameResponse { game_id }))
 }

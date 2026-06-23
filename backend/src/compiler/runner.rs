@@ -1,14 +1,10 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tokio::process::Command;
 
 use crate::game::session::TestResult;
 
-pub async fn run_tests(
-    challenge_id: &str,
-    function_name: &str,
-    new_code: &str,
-) -> Vec<TestResult> {
+pub async fn run_tests(challenge_id: &str, function_name: &str, new_code: &str) -> Vec<TestResult> {
     let challenges_dir = Path::new("../challenges");
     let source_dir = challenges_dir.join(challenge_id);
     let temp_id = uuid::Uuid::new_v4().to_string();
@@ -97,7 +93,10 @@ fn parse_results(stdout: &str, _stderr: &str) -> Vec<TestResult> {
                     .trim_start_matches("test ")
                     .trim_end_matches(" ... FAILED")
                     .to_string();
-                results.push(TestResult { name, passed: false });
+                results.push(TestResult {
+                    name,
+                    passed: false,
+                });
             }
         }
     }
@@ -110,9 +109,10 @@ fn parse_results(stdout: &str, _stderr: &str) -> Vec<TestResult> {
 }
 
 fn error_results() -> Vec<TestResult> {
-    vec![
-        TestResult { name: "test_runner_error".to_string(), passed: false },
-    ]
+    vec![TestResult {
+        name: "test_runner_error".to_string(),
+        passed: false,
+    }]
 }
 
 fn copy_dir(src: &Path, dst: &Path) -> std::io::Result<()> {

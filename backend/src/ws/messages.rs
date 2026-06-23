@@ -11,6 +11,7 @@ pub enum ClientMessage {
     EditCode { function_name: String, code: String },
     RunTests,
     CallMeeting,
+    StartVoting,
     CastVote { target_wallet: String },
 }
 
@@ -21,6 +22,7 @@ pub enum ServerMessage {
         game_id: String,
         your_color: String,
         players: Vec<PlayerInfo>,
+        state: String,
     },
     PlayerJoined {
         players: Vec<PlayerInfo>,
@@ -30,6 +32,9 @@ pub enum ServerMessage {
     },
     GameStarted {
         functions: Vec<FunctionInfo>,
+    },
+    RoleAssigned {
+        role: String,
     },
     TestResults {
         results: Vec<TestResult>,
@@ -47,6 +52,7 @@ pub enum ServerMessage {
         edit_history: Vec<EditInfo>,
         caller_color: String,
     },
+    VotingStarted,
     VoteUpdate {
         votes: HashMap<String, usize>,
     },
@@ -63,6 +69,7 @@ pub enum ServerMessage {
 #[derive(Debug, Serialize, Clone)]
 pub struct PlayerInfo {
     pub color: String,
+    pub wallet: String,
     pub is_host: bool,
 }
 

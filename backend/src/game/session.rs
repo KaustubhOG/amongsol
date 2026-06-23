@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
@@ -72,6 +72,8 @@ pub struct GameSession {
     pub votes: HashMap<PlayerId, PlayerId>,
     pub winner: Option<WinnerType>,
     pub current_code: HashMap<String, String>,
+    pub latest_test_results: Vec<TestResult>,
+    pub meeting_caller_color: Option<String>,
     pub timer_stopped: Arc<AtomicBool>,
     pub started_at: Option<u64>,
 }
@@ -89,6 +91,8 @@ impl GameSession {
             votes: HashMap::new(),
             winner: None,
             current_code: HashMap::new(),
+            latest_test_results: Vec::new(),
+            meeting_caller_color: None,
             timer_stopped: Arc::new(AtomicBool::new(false)),
             started_at: None,
         }
@@ -146,7 +150,8 @@ impl GameSession {
     }
 
     pub fn cast_vote(&mut self, voter_wallet: &str, target_wallet: &str) -> Option<WinnerType> {
-        self.votes.insert(voter_wallet.to_string(), target_wallet.to_string());
+        self.votes
+            .insert(voter_wallet.to_string(), target_wallet.to_string());
         self.state = GameState::Voting;
 
         let threshold = self.players.len() / 2 + 1;

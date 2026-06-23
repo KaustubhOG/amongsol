@@ -8,10 +8,6 @@ pub fn random_challenge() -> Challenge {
     all.into_iter().nth(idx).unwrap()
 }
 
-pub fn challenge_by_id(id: &str) -> Option<Challenge> {
-    all_challenges().into_iter().find(|c| c.id == id)
-}
-
 fn all_challenges() -> Vec<Challenge> {
     vec![
         transfer_challenge(),

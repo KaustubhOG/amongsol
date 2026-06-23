@@ -1,20 +1,17 @@
+use axum::extract::ws::{Message, WebSocket};
 use axum::{
     extract::{State, WebSocketUpgrade},
     response::Response,
 };
-use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::AppState;
 use crate::ws::messages::{ClientMessage, ServerMessage};
 use crate::ws::router::handle_client_message;
+use crate::AppState;
 
-pub async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<AppState>,
-) -> Response {
+pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
@@ -61,6 +58,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
             .iter()
             .map(|p| crate::ws::messages::PlayerInfo {
                 color: p.cursor_color.clone(),
+                wallet: p.wallet.clone(),
                 is_host: p.is_host,
             })
             .collect::<Vec<_>>();
