@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import socket from "@/lib/socket";
 
 interface TestResult {
@@ -20,27 +20,51 @@ interface PlayerStatus {
   function: string;
 }
 
+function getInitialGameState() {
+  const started = socket.getLastMessage("GameStarted");
+  const functions = (started?.functions as FunctionInfo[] | undefined) ?? [];
+  const code = functions.reduce<Record<string, string>>((acc, fn) => {
+    acc[fn.name] = fn.code;
+    return acc;
+  }, {});
+
+  return {
+    functions,
+    code,
+    testResults:
+      (socket.getLastMessage("TestResults")?.results as TestResult[] | undefined) ?? [],
+    timer: (socket.getLastMessage("TimerTick")?.remaining as number | undefined) ?? 180,
+    locked: Boolean(socket.getLastMessage("CodeLocked")),
+  };
+}
+
 export default function GamePage() {
   const params = useParams();
   const router = useRouter();
   const roomId = params.roomId as string;
+  const initialState = getInitialGameState();
 
-  const [functions, setFunctions] = useState<FunctionInfo[]>([]);
-  const [code, setCode] = useState<Record<string, string>>({});
-  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [functions, setFunctions] = useState<FunctionInfo[]>(initialState.functions);
+  const [code, setCode] = useState<Record<string, string>>(initialState.code);
+  const [testResults, setTestResults] = useState<TestResult[]>(initialState.testResults);
   const [players, setPlayers] = useState<PlayerStatus[]>([]);
-  const [timer, setTimer] = useState(180);
-  const [locked, setLocked] = useState(false);
-  const myColor = useRef(socket.getWallet());
+  const [timer, setTimer] = useState(initialState.timer);
+  const [locked, setLocked] = useState(initialState.locked);
 
   useEffect(() => {
+    const applyGameStarted = (msg: Record<string, unknown>) => {
+      const fns = msg.functions as FunctionInfo[];
+      setFunctions(fns);
+      const initial: Record<string, string> = {};
+      fns.forEach((f) => {
+        initial[f.name] = f.code;
+      });
+      setCode(initial);
+    };
+
     const unsub = socket.onMessage((msg) => {
       if (msg.type === "GameStarted") {
-        const fns = msg.functions as FunctionInfo[];
-        setFunctions(fns);
-        const initial: Record<string, string> = {};
-        fns.forEach((f) => { initial[f.name] = f.code; });
-        setCode(initial);
+        applyGameStarted(msg);
       }
 
       if (msg.type === "TestResults") {

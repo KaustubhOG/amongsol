@@ -9,13 +9,23 @@ interface Player {
   is_host: boolean;
 }
 
+function getInitialLobbyState() {
+  const joined = socket.getLastMessage("GameJoined");
+  const myColor = (joined?.your_color as string | undefined) ?? "";
+  const players = (joined?.players as Player[] | undefined) ?? [];
+  const isHost = players.find((p) => p.color === myColor)?.is_host ?? false;
+
+  return { myColor, players, isHost };
+}
+
 export default function LobbyPage() {
   const params = useParams();
   const router = useRouter();
   const roomId = params.roomId as string;
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [myColor, setMyColor] = useState("");
-  const [isHost, setIsHost] = useState(false);
+  const initialState = getInitialLobbyState();
+  const [players, setPlayers] = useState<Player[]>(initialState.players);
+  const [myColor, setMyColor] = useState(initialState.myColor);
+  const [isHost, setIsHost] = useState(initialState.isHost);
 
   useEffect(() => {
     const unsub = socket.onMessage((msg) => {
@@ -34,16 +44,6 @@ export default function LobbyPage() {
         router.push(`/game/${roomId}`);
       }
     });
-
-    const already = socket.getLastMessage("GameJoined");
-    if (already) {
-      const color = already.your_color as string;
-      const playerList = already.players as Player[];
-      setMyColor(color);
-      setPlayers(playerList);
-      const me = playerList.find((p) => p.color === color);
-      if (me) setIsHost(me.is_host);
-    }
 
     return unsub;
   }, [roomId, router]);
