@@ -1,19 +1,11 @@
-use super::session::GameSession;
+use rand::Rng;
+
+use crate::game::session::GameSession;
 
 pub fn assign_impostor(session: &mut GameSession) {
     if session.players.is_empty() {
         return;
     }
-    let index = rand_index(session.players.len());
-    let impostor_id = session.players[index].id.clone();
-    session.impostor = Some(impostor_id);
-}
-
-fn rand_index(len: usize) -> usize {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .subsec_nanos() as usize;
-    nanos % len
+    let idx = rand::thread_rng().gen_range(0..session.players.len());
+    session.impostor = Some(session.players[idx].wallet.clone());
 }

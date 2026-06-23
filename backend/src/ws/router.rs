@@ -1,24 +1,25 @@
-use futures_util::SinkExt;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::collections::HashMap;
 
+use crate::game::challenges::random_challenge;
 use crate::game::roles::assign_impostor;
-use crate::game::session::{Edit, GameState, TestResult};
+use crate::game::session::{Edit, GameState, WinnerType};
 use crate::game::timer::start_timer;
 use crate::ws::messages::{ClientMessage, EditInfo, FunctionInfo, PlayerInfo, ServerMessage};
 use crate::AppState;
 
 pub async fn handle_client_message(msg: ClientMessage, conn_id: &str, state: &AppState) {
     match msg {
-        ClientMessage::StartGame => handle_start_game(conn_id, state).await,
-        ClientMessage::EditCode {
-            function_name,
-            code,
-        } => handle_edit(conn_id, function_name, code, state).await,
-        ClientMessage::RunTests => handle_run_tests(conn_id, state).await,
-        ClientMessage::CallMeeting => handle_meeting(conn_id, state).await,
-        ClientMessage::CastVote { target_id } => handle_vote(conn_id, target_id, state).await,
         ClientMessage::JoinGame { game_id, wallet } => {
             handle_join(conn_id, game_id, wallet, state).await
+        }
+        ClientMessage::StartGame => handle_start_game(conn_id, state).await,
+        ClientMessage::EditCode { function_name, code } => {
+            handle_edit(conn_id, function_name, code, state).await
+        }
+        ClientMessage::RunTests => handle_run_tests(conn_id, state).await,
+        ClientMessage::CallMeeting => handle_meeting(conn_id, state).await,
+        ClientMessage::CastVote { target_wallet } => {
+            handle_vote(conn_id, target_wallet, state).await
         }
     }
 }
@@ -26,38 +27,42 @@ pub async fn handle_client_message(msg: ClientMessage, conn_id: &str, state: &Ap
 async fn handle_join(conn_id: &str, game_id: String, wallet: String, state: &AppState) {
     match state
         .game_manager
-        .join_game(&game_id, wallet.clone(), conn_id.to_string())
+        .join_game(&game_id, wallet, conn_id.to_string())
     {
-        Ok(_) => {
-            let (your_color, players) = {
-                let session = state.game_manager.sessions.get(&game_id).unwrap();
-                let color = session
-                    .get_player_by_conn(conn_id)
-                    .map(|p| p.cursor_color.clone())
-                    .unwrap_or_default();
-                let players = session
-                    .players
-                    .iter()
-                    .map(|p| PlayerInfo {
-                        color: p.cursor_color.clone(),
-                        is_host: p.is_host,
-                    })
-                    .collect::<Vec<_>>();
-                (color, players)
-            };
+        Ok((_player, all_players)) => {
+            let your_color = all_players
+                .iter()
+                .find(|p| p.conn_id == conn_id)
+                .map(|p| p.cursor_color.clone())
+                .unwrap_or_default();
+
+            let player_infos: Vec<PlayerInfo> = all_players
+                .iter()
+                .map(|p| PlayerInfo {
+                    color: p.cursor_color.clone(),
+                    is_host: p.is_host,
+                })
+                .collect();
 
             send_to_conn(
                 conn_id,
                 ServerMessage::GameJoined {
                     game_id: game_id.clone(),
                     your_color,
-                    players: players.clone(),
+                    players: player_infos.clone(),
                 },
                 state,
             )
             .await;
 
-            broadcast_to_game(&game_id, ServerMessage::PlayerJoined { players }, state).await;
+            broadcast_to_game(
+                &game_id,
+                ServerMessage::PlayerJoined {
+                    players: player_infos,
+                },
+                state,
+            )
+            .await;
         }
         Err(e) => {
             send_to_conn(
@@ -78,29 +83,60 @@ async fn handle_start_game(conn_id: &str, state: &AppState) {
         None => return,
     };
 
+    let is_host = {
+        let session = match state.game_manager.sessions.get(&game_id) {
+            Some(s) => s,
+            None => return,
+        };
+        session
+            .player_by_conn(conn_id)
+            .map(|p| p.is_host)
+            .unwrap_or(false)
+    };
+
+    if !is_host {
+        send_to_conn(
+            conn_id,
+            ServerMessage::Error {
+                message: "only host can start the game".to_string(),
+            },
+            state,
+        )
+        .await;
+        return;
+    }
+
     let functions = {
         let mut session = match state.game_manager.sessions.get_mut(&game_id) {
             Some(s) => s,
             None => return,
         };
 
+        if session.state != GameState::Lobby {
+            return;
+        }
+
         assign_impostor(&mut session);
         session.state = GameState::Playing;
 
-        let challenge = default_challenge();
-        let fns = challenge
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        session.started_at = Some(now);
+
+        let challenge = random_challenge();
+        let fns: Vec<FunctionInfo> = challenge
             .functions
             .iter()
             .map(|f| FunctionInfo {
                 name: f.name.clone(),
-                code: f.broken_code.clone(),
+                code: f.code.clone(),
             })
-            .collect::<Vec<_>>();
+            .collect();
 
         for f in &challenge.functions {
-            session
-                .current_code
-                .insert(f.name.clone(), f.broken_code.clone());
+            session.current_code.insert(f.name.clone(), f.code.clone());
         }
 
         session.challenge = Some(challenge);
@@ -108,7 +144,12 @@ async fn handle_start_game(conn_id: &str, state: &AppState) {
     };
 
     broadcast_to_game(&game_id, ServerMessage::GameStarted { functions }, state).await;
-    start_timer(game_id, state.clone());
+
+    start_timer(
+        game_id,
+        state.game_manager.clone(),
+        state.connections.clone(),
+    );
 }
 
 async fn handle_edit(conn_id: &str, function_name: String, code: String, state: &AppState) {
@@ -124,17 +165,23 @@ async fn handle_edit(conn_id: &str, function_name: String, code: String, state: 
         };
 
         if session.state != GameState::Playing {
+            send_to_conn(
+                conn_id,
+                ServerMessage::Error {
+                    message: "cannot edit outside of playing state".to_string(),
+                },
+                state,
+            )
+            .await;
             return;
         }
 
         let color = session
-            .get_player_by_conn(conn_id)
+            .player_by_conn(conn_id)
             .map(|p| p.cursor_color.clone())
             .unwrap_or_default();
 
-        session
-            .current_code
-            .insert(function_name.clone(), code.clone());
+        session.current_code.insert(function_name.clone(), code);
         color
     };
 
@@ -155,30 +202,42 @@ async fn handle_run_tests(conn_id: &str, state: &AppState) {
         None => return,
     };
 
-    let (cursor_color, current_code) = {
+    let (cursor_color, challenge_id, function_name, current_code) = {
         let session = match state.game_manager.sessions.get(&game_id) {
             Some(s) => s,
             None => return,
         };
 
+        if session.state != GameState::Playing && session.state != GameState::CodeLocked {
+            return;
+        }
+
         let color = session
-            .get_player_by_conn(conn_id)
+            .player_by_conn(conn_id)
             .map(|p| p.cursor_color.clone())
             .unwrap_or_default();
 
+        let (cid, fname) = session
+            .challenge
+            .as_ref()
+            .and_then(|c| c.functions.first().map(|f| (c.id.clone(), f.name.clone())))
+            .unwrap_or_else(|| ("transfer".to_string(), "transfer".to_string()));
+
         let code = session
             .current_code
-            .get("transfer")
+            .get(&fname)
             .cloned()
             .unwrap_or_default();
-        (color, code)
+
+        (color, cid, fname, code)
     };
 
-    let results = crate::compiler::runner::run_tests("transfer", "transfer", &current_code).await;
+    let results =
+        crate::compiler::runner::run_tests(&challenge_id, &function_name, &current_code).await;
 
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .unwrap_or_default()
         .as_secs();
 
     {
@@ -187,10 +246,10 @@ async fn handle_run_tests(conn_id: &str, state: &AppState) {
             None => return,
         };
 
-        session.edit_history.push(crate::game::session::Edit {
+        session.edit_history.push(Edit {
             player_id: conn_id.to_string(),
             cursor_color: cursor_color.clone(),
-            function_name: "transfer".to_string(),
+            function_name: function_name.clone(),
             timestamp,
             test_snapshot: results.clone(),
         });
@@ -219,18 +278,26 @@ async fn handle_meeting(conn_id: &str, state: &AppState) {
             None => return,
         };
 
-        if session.state != GameState::Playing {
+        if session.state != GameState::Playing && session.state != GameState::CodeLocked {
+            send_to_conn(
+                conn_id,
+                ServerMessage::Error {
+                    message: "cannot call meeting in current state".to_string(),
+                },
+                state,
+            )
+            .await;
             return;
         }
 
         session.state = GameState::Meeting;
 
         let color = session
-            .get_player_by_conn(conn_id)
+            .player_by_conn(conn_id)
             .map(|p| p.cursor_color.clone())
             .unwrap_or_default();
 
-        let history = session
+        let history: Vec<EditInfo> = session
             .edit_history
             .iter()
             .map(|e| EditInfo {
@@ -243,7 +310,7 @@ async fn handle_meeting(conn_id: &str, state: &AppState) {
                     "fail".to_string()
                 },
             })
-            .collect::<Vec<_>>();
+            .collect();
 
         (color, history)
     };
@@ -259,55 +326,45 @@ async fn handle_meeting(conn_id: &str, state: &AppState) {
     .await;
 }
 
-async fn handle_vote(conn_id: &str, target_id: String, state: &AppState) {
+async fn handle_vote(conn_id: &str, target_wallet: String, state: &AppState) {
     let game_id = match state.game_manager.find_game_by_conn(conn_id) {
         Some(id) => id,
         None => return,
     };
 
-    let (vote_counts, game_over, winner, impostor_color, impostor_wallet) = {
+    let voter_wallet = {
+        let session = match state.game_manager.sessions.get(&game_id) {
+            Some(s) => s,
+            None => return,
+        };
+
+        if session.state != GameState::Meeting && session.state != GameState::Voting {
+            send_to_conn(
+                conn_id,
+                ServerMessage::Error {
+                    message: "cannot vote outside of meeting".to_string(),
+                },
+                state,
+            )
+            .await;
+            return;
+        }
+
+        session
+            .player_by_conn(conn_id)
+            .map(|p| p.wallet.clone())
+            .unwrap_or_default()
+    };
+
+    let (vote_counts, game_result) = {
         let mut session = match state.game_manager.sessions.get_mut(&game_id) {
             Some(s) => s,
             None => return,
         };
 
-        session.votes.insert(conn_id.to_string(), target_id.clone());
-
-        let mut counts: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
-        for v in session.votes.values() {
-            *counts.entry(v.clone()).or_insert(0) += 1;
-        }
-
-        let player_count = session.players.len() as u32;
-        let ejected = counts
-            .iter()
-            .find(|(_, &v)| v > player_count / 2)
-            .map(|(k, _)| k.clone());
-
-        if let Some(ejected_id) = ejected {
-            let impostor_id = session.impostor.clone().unwrap_or_default();
-            let was_impostor = ejected_id == impostor_id;
-
-            let impostor_player = session.players.iter().find(|p| p.id == impostor_id);
-            let color = impostor_player
-                .map(|p| p.cursor_color.clone())
-                .unwrap_or_default();
-            let wallet = impostor_player
-                .map(|p| p.wallet.clone())
-                .unwrap_or_default();
-
-            session.state = GameState::Ended;
-
-            let winner = if was_impostor {
-                "civilians"
-            } else {
-                "impostor"
-            }
-            .to_string();
-            (counts, true, winner, color, wallet)
-        } else {
-            (counts, false, String::new(), String::new(), String::new())
-        }
+        let result = session.cast_vote(&voter_wallet, &target_wallet);
+        let counts: HashMap<String, usize> = session.vote_counts();
+        (counts, result)
     };
 
     broadcast_to_game(
@@ -317,91 +374,81 @@ async fn handle_vote(conn_id: &str, target_id: String, state: &AppState) {
     )
     .await;
 
-    if game_over {
+    if let Some(winner_type) = game_result {
+        let (winner_str, impostor_color, impostor_wallet, duration) = {
+            let session = match state.game_manager.sessions.get(&game_id) {
+                Some(s) => s,
+                None => return,
+            };
+            let w = match winner_type {
+                WinnerType::Civilians => "civilians",
+                WinnerType::Impostor => "impostor",
+            }
+            .to_string();
+            let color = session.impostor_color().unwrap_or_default();
+            let wallet = session.impostor_wallet().unwrap_or_default();
+            let dur = session.elapsed_secs();
+            (w, color, wallet, dur)
+        };
+
         broadcast_to_game(
             &game_id,
             ServerMessage::GameOver {
-                winner,
-                impostor_color,
-                impostor_wallet,
+                winner: winner_str.clone(),
+                impostor_color: impostor_color.clone(),
+                impostor_wallet: impostor_wallet.clone(),
             },
             state,
         )
         .await;
+
+        let player_count = state
+            .game_manager
+            .sessions
+            .get(&game_id)
+            .map(|s| s.players.len() as i32)
+            .unwrap_or(0);
+
+        let db = state.db.clone();
+        let gid = game_id.clone();
+        tokio::spawn(async move {
+            let _ = sqlx::query(
+                "INSERT INTO game_results (game_id, winner, impostor_wallet, impostor_color, player_count, duration_secs) VALUES ($1, $2, $3, $4, $5, $6)"
+            )
+            .bind(&gid)
+            .bind(&winner_str)
+            .bind(&impostor_wallet)
+            .bind(&impostor_color)
+            .bind(player_count)
+            .bind(duration as i64)
+            .execute(&*db)
+            .await;
+        });
     }
 }
 
-fn run_mock_tests(current_code: &std::collections::HashMap<String, String>) -> Vec<TestResult> {
-    let transfer_code = current_code.get("transfer").cloned().unwrap_or_default();
-
-    let sender_decreases = transfer_code.contains("sender.balance -= amount");
-    let receiver_increases = transfer_code.contains("receiver.balance += amount");
-
-    vec![
-        TestResult {
-            name: "sender_decreases".to_string(),
-            passed: sender_decreases,
-        },
-        TestResult {
-            name: "receiver_increases".to_string(),
-            passed: receiver_increases,
-        },
-        TestResult {
-            name: "supply_unchanged".to_string(),
-            passed: sender_decreases && receiver_increases,
-        },
-    ]
-}
-
 pub async fn broadcast_to_game(game_id: &str, msg: ServerMessage, state: &AppState) {
-    let conn_ids: Vec<String> = {
-        match state.game_manager.sessions.get(game_id) {
-            Some(session) => session.players.iter().map(|p| p.conn_id.clone()).collect(),
-            None => return,
-        }
+    let conn_ids: Vec<String> = match state.game_manager.sessions.get(game_id) {
+        Some(session) => session.all_conn_ids(),
+        None => return,
     };
 
-    let json = serde_json::to_string(&msg).unwrap();
+    let json = match serde_json::to_string(&msg) {
+        Ok(j) => j,
+        Err(_) => return,
+    };
 
     for conn_id in conn_ids {
         if let Some(sender) = state.connections.get(&conn_id) {
-            let mut locked = sender.lock().await;
-            locked
-                .send(axum::extract::ws::Message::Text(json.clone().into()))
-                .await
-                .ok();
+            let _ = sender.send(json.clone());
         }
     }
 }
 
 pub async fn send_to_conn(conn_id: &str, msg: ServerMessage, state: &AppState) {
     if let Some(sender) = state.connections.get(conn_id) {
-        let json = serde_json::to_string(&msg).unwrap();
-        let mut locked = sender.lock().await;
-        locked
-            .send(axum::extract::ws::Message::Text(json.into()))
-            .await
-            .ok();
-    }
-}
-
-fn default_challenge() -> crate::game::session::Challenge {
-    crate::game::session::Challenge {
-        id: "transfer_001".to_string(),
-        functions: vec![
-            crate::game::session::ChallengeFunction {
-                name: "transfer".to_string(),
-                broken_code: "pub fn transfer(ctx: Context<Transfer>, amount: u64) -> Result<()> {\n    let sender = &mut ctx.accounts.sender;\n    let receiver = &mut ctx.accounts.receiver;\n\n    sender.balance += amount;\n    receiver.balance -= amount;\n\n    Ok(())\n}".to_string(),
-            },
-            crate::game::session::ChallengeFunction {
-                name: "withdraw".to_string(),
-                broken_code: "pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {\n    let vault = &mut ctx.accounts.vault;\n    let user = &mut ctx.accounts.user;\n\n    vault.balance += amount;\n    user.balance -= amount;\n\n    Ok(())\n}".to_string(),
-            },
-            crate::game::session::ChallengeFunction {
-                name: "initialize".to_string(),
-                broken_code: "pub fn initialize(ctx: Context<Initialize>) -> Result<()> {\n    let vault = &mut ctx.accounts.vault;\n    vault.owner = ctx.accounts.payer.key();\n    vault.balance = 1000;\n    Ok(())\n}".to_string(),
-            },
-        ],
-        test_file: String::new(),
+        if let Ok(json) = serde_json::to_string(&msg) {
+            let _ = sender.send(json);
+        }
     }
 }

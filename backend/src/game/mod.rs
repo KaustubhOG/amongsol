@@ -1,3 +1,4 @@
+pub mod challenges;
 pub mod manager;
 pub mod roles;
 pub mod session;

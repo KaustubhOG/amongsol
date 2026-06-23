@@ -1,27 +1,26 @@
 use axum::{
-    extract::{State, WebSocketUpgrade},
-    response::Response,
     routing::{get, post},
     Router,
 };
 use dashmap::DashMap;
 use std::{env, sync::Arc};
 use tower_http::cors::CorsLayer;
-use tracing_subscriber;
 
 mod compiler;
 mod errors;
 mod game;
+mod types;
 mod ws;
 
 use game::manager::GameManager;
+use types::PlayerSender;
 use ws::handler::ws_handler;
 use ws::routes::{create_game_handler, join_game_handler};
 
 #[derive(Clone)]
 pub struct AppState {
     pub game_manager: Arc<GameManager>,
-    pub connections: Arc<DashMap<String, Arc<tokio::sync::Mutex<ws::handler::PlayerSender>>>>,
+    pub connections: Arc<DashMap<String, PlayerSender>>,
     pub db: Arc<sqlx::PgPool>,
 }
 
@@ -35,6 +34,22 @@ async fn main() {
     let db = sqlx::PgPool::connect(&database_url)
         .await
         .expect("failed to connect to database");
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS game_results (
+            id SERIAL PRIMARY KEY,
+            game_id TEXT NOT NULL,
+            winner TEXT NOT NULL,
+            impostor_wallet TEXT NOT NULL,
+            impostor_color TEXT NOT NULL,
+            player_count INT NOT NULL,
+            duration_secs BIGINT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )",
+    )
+    .execute(&db)
+    .await
+    .expect("failed to run migrations");
 
     let state = AppState {
         game_manager: Arc::new(GameManager::new()),

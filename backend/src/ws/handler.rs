@@ -4,15 +4,12 @@ use axum::{
 };
 use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt};
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::AppState;
 use crate::ws::messages::{ClientMessage, ServerMessage};
 use crate::ws::router::handle_client_message;
-
-pub type PlayerSender = futures_util::stream::SplitSink<WebSocket, Message>;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -22,13 +19,22 @@ pub async fn ws_handler(
 }
 
 async fn handle_socket(socket: WebSocket, state: AppState) {
-    let (sender, mut receiver) = socket.split();
+    let (mut sink, mut stream) = socket.split();
     let conn_id = Uuid::new_v4().to_string();
-    let sender = Arc::new(Mutex::new(sender));
 
-    state.connections.insert(conn_id.clone(), sender.clone());
+    let (tx, mut rx) = mpsc::unbounded_channel::<String>();
 
-    while let Some(Ok(msg)) = receiver.next().await {
+    state.connections.insert(conn_id.clone(), tx);
+
+    tokio::spawn(async move {
+        while let Some(msg) = rx.recv().await {
+            if sink.send(Message::Text(msg.into())).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    while let Some(Ok(msg)) = stream.next().await {
         if let Message::Text(text) = msg {
             match serde_json::from_str::<ClientMessage>(&text) {
                 Ok(client_msg) => {
@@ -38,13 +44,32 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                     let err = ServerMessage::Error {
                         message: "invalid message format".to_string(),
                     };
-                    let json = serde_json::to_string(&err).unwrap();
-                    sender.lock().await.send(Message::Text(json.into())).await.ok();
+                    if let Ok(json) = serde_json::to_string(&err) {
+                        if let Some(sender) = state.connections.get(&conn_id) {
+                            let _ = sender.send(json);
+                        }
+                    }
                 }
             }
         }
     }
 
     state.connections.remove(&conn_id);
-    state.game_manager.remove_conn(&conn_id);
+
+    if let Some((game_id, _removed, remaining)) = state.game_manager.remove_conn(&conn_id) {
+        let players = remaining
+            .iter()
+            .map(|p| crate::ws::messages::PlayerInfo {
+                color: p.cursor_color.clone(),
+                is_host: p.is_host,
+            })
+            .collect::<Vec<_>>();
+
+        crate::ws::router::broadcast_to_game(
+            &game_id,
+            ServerMessage::PlayerLeft { players },
+            &state,
+        )
+        .await;
+    }
 }

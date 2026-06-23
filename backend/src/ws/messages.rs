@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
 use crate::game::session::TestResult;
 
 #[derive(Debug, Deserialize)]
@@ -10,7 +11,7 @@ pub enum ClientMessage {
     EditCode { function_name: String, code: String },
     RunTests,
     CallMeeting,
-    CastVote { target_id: String },
+    CastVote { target_wallet: String },
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -22,6 +23,9 @@ pub enum ServerMessage {
         players: Vec<PlayerInfo>,
     },
     PlayerJoined {
+        players: Vec<PlayerInfo>,
+    },
+    PlayerLeft {
         players: Vec<PlayerInfo>,
     },
     GameStarted {
@@ -44,7 +48,7 @@ pub enum ServerMessage {
         caller_color: String,
     },
     VoteUpdate {
-        votes: HashMap<String, u32>,
+        votes: HashMap<String, usize>,
     },
     GameOver {
         winner: String,

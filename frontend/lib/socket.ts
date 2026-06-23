@@ -32,6 +32,47 @@ class SocketClient {
     };
   }
 
+  // Same as connect(), but returns a Promise that resolves once the
+  // WebSocket connection is actually open. Needed because the UI sends
+  // a JoinGame message immediately after connecting and needs to know
+  // the socket is ready first.
+  connectAndWait(wallet: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.wallet = wallet;
+        resolve();
+        return;
+      }
+
+      this.wallet = wallet;
+      this.lastMessages = {};
+      this.queue = [];
+      this.ws = new WebSocket("ws://localhost:8080/ws");
+
+      this.ws.onopen = () => {
+        this.queue.forEach((msg) => this.ws!.send(JSON.stringify(msg)));
+        this.queue = [];
+        resolve();
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          this.lastMessages[msg.type as string] = msg;
+          this.handlers.forEach((h) => h(msg));
+        } catch {}
+      };
+
+      this.ws.onerror = (err) => {
+        reject(err);
+      };
+
+      this.ws.onclose = () => {
+        this.ws = null;
+      };
+    });
+  }
+
   send(msg: Record<string, unknown>) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(msg));

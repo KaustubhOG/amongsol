@@ -23,16 +23,14 @@ pub struct JoinGameRequest {
 #[derive(Serialize)]
 pub struct JoinGameResponse {
     pub success: bool,
+    pub game_id: String,
 }
 
 pub async fn create_game_handler(
     State(state): State<AppState>,
-    Json(body): Json<CreateGameRequest>,
+    Json(_body): Json<CreateGameRequest>,
 ) -> Result<Json<CreateGameResponse>, AppError> {
-    let game_id = state
-        .game_manager
-        .create_game(body.wallet, "http_placeholder".to_string());
-
+    let game_id = state.game_manager.create_game();
     Ok(Json(CreateGameResponse { game_id }))
 }
 
@@ -43,7 +41,10 @@ pub async fn join_game_handler(
     state
         .game_manager
         .join_game(&body.game_id, body.wallet, "http_placeholder".to_string())
-        .map_err(|_| AppError::GameFull)?;
+        .map_err(|e| e)?;
 
-    Ok(Json(JoinGameResponse { success: true }))
+    Ok(Json(JoinGameResponse {
+        success: true,
+        game_id: body.game_id,
+    }))
 }
