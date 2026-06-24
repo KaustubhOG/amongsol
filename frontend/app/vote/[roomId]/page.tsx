@@ -74,6 +74,7 @@ export default function VotePage() {
       }
 
       if (msg.type === "Error") {
+        setVotedWallet(null);
         setError(msg.message as string);
       }
     });
@@ -88,8 +89,8 @@ export default function VotePage() {
   }
 
   return (
-    <main className="min-h-screen px-6 py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col gap-6">
+    <main className="page-shell">
+      <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col gap-6">
         <RoomHeader
           badge="vote"
           title="Who Sabotaged the Build?"

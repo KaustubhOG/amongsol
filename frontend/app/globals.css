@@ -9,15 +9,13 @@
 
 :root {
   --green: #14f195;
-  --bg: #0f0f0f;
-  --border: #2a2a2a;
+  --bg: #101010;
+  --border: #3b2415;
   --text: #ffffff;
-  --muted: #888888;
-  --wood-strong: #3a1f10;
-  --wood-mid: #6a4121;
-  --wood-light: #9b6231;
-  --wood-shadow: rgba(0, 0, 0, 0.35);
-  --panel-glow: rgba(250, 210, 140, 0.12);
+  --muted: #b0a89b;
+  --wood-strong: #4d2a16;
+  --wood-mid: #7b4b27;
+  --wood-light: #a66a38;
 }
 
 body {
@@ -40,10 +38,8 @@ body::before {
     radial-gradient(circle at 74% 12%, rgba(255, 255, 255, 0.82) 0 4.2%, transparent 4.3%),
     radial-gradient(circle at 80% 14%, rgba(255, 255, 255, 0.72) 0 5.2%, transparent 5.3%),
     radial-gradient(circle at 54% 30%, rgba(255, 255, 255, 0.22) 0 8%, transparent 8.1%),
-    linear-gradient(180deg, transparent 0 56%, rgba(0, 0, 0, 0.05) 56% 58%, transparent 58% 100%),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 4px, transparent 4px 32px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.18));
-  opacity: 0.85;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.12));
+  opacity: 0.9;
   pointer-events: none;
 }
 
@@ -51,11 +47,8 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.18;
+  background: radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.05), transparent 45%);
+  opacity: 0.12;
   pointer-events: none;
 }
 
@@ -63,6 +56,16 @@ body::after {
   position: relative;
   z-index: 1;
   min-height: 100vh;
+}
+
+.page-shell {
+  min-height: 100vh;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.page-frame {
+  width: min(100%, 1440px);
+  margin-inline: auto;
 }
 
 button:not(:disabled),
@@ -85,6 +88,11 @@ button:not(:disabled),
 
 .hover-lift:hover:not(:disabled) {
   transform: translateY(-1px);
+}
+
+:where(button, input, textarea, a):focus-visible {
+  outline: 2px solid rgba(20, 241, 149, 0.8);
+  outline-offset: 2px;
 }
 
 .loading-dots::after {
@@ -116,57 +124,27 @@ button:not(:disabled),
 .editor-shell {
   position: relative;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(91, 54, 25, 0.96), rgba(58, 31, 16, 0.96)),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 18px, rgba(255, 255, 255, 0.04) 18px 20px);
+  background: linear-gradient(180deg, rgba(84, 50, 24, 0.98), rgba(58, 32, 16, 0.98));
   border: 4px solid var(--wood-strong);
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.06),
-    inset 0 -16px 22px rgba(0, 0, 0, 0.18),
-    0 16px 0 var(--wood-shadow);
-}
-
-.editor-shell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 30%),
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.1), transparent 30%);
-  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .editor-gutter {
-  border-right: 1px solid rgba(0, 0, 0, 0.35);
-  color: #f3e1c1;
-  background: rgba(23, 12, 6, 0.42);
+  border-right: 1px solid rgba(0, 0, 0, 0.28);
+  color: #eadcc5;
+  background: rgba(23, 12, 6, 0.38);
 }
 
 .cursor-badge {
-  box-shadow: 0 0 0 1px rgba(20, 241, 149, 0.35), 0 0 18px rgba(20, 241, 149, 0.18);
+  box-shadow: 0 0 0 1px rgba(20, 241, 149, 0.3);
 }
 
 .wood-panel {
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(134, 82, 41, 0.92), rgba(79, 45, 21, 0.92)),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 18px, rgba(255, 255, 255, 0.06) 18px 20px);
+  background: linear-gradient(180deg, rgba(133, 79, 39, 0.97), rgba(82, 47, 22, 0.97));
   border: 4px solid var(--wood-strong);
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.06),
-    inset 0 -18px 28px rgba(0, 0, 0, 0.22),
-    0 16px 0 var(--wood-shadow);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   color: var(--text);
-}
-
-.wood-panel::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 18%, transparent 82%, rgba(255, 255, 255, 0.05)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 20%, transparent 80%, rgba(0, 0, 0, 0.12));
-  pointer-events: none;
 }
 
 .wood-panel > * {
@@ -175,31 +153,21 @@ button:not(:disabled),
 }
 
 .wood-panel-soft {
-  background:
-    linear-gradient(180deg, rgba(104, 62, 31, 0.9), rgba(62, 34, 17, 0.9)),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0 18px, rgba(255, 255, 255, 0.05) 18px 20px);
+  background: linear-gradient(180deg, rgba(105, 61, 28, 0.96), rgba(64, 35, 16, 0.96));
   border: 3px solid var(--wood-strong);
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.05),
-    0 10px 0 var(--wood-shadow);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .wood-chip {
-  background:
-    linear-gradient(180deg, rgba(120, 72, 36, 0.94), rgba(72, 43, 19, 0.94)),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 14px, rgba(255, 255, 255, 0.06) 14px 16px);
+  background: linear-gradient(180deg, rgba(120, 70, 34, 0.96), rgba(74, 42, 19, 0.96));
   border: 3px solid var(--wood-strong);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .wood-button {
-  background:
-    linear-gradient(180deg, rgba(150, 96, 47, 0.96), rgba(93, 54, 25, 0.96)),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 18px, rgba(255, 255, 255, 0.05) 18px 20px);
+  background: linear-gradient(180deg, rgba(153, 94, 43, 0.96), rgba(99, 56, 25, 0.96));
   border: 4px solid var(--wood-strong);
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.06),
-    0 8px 0 var(--wood-shadow);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .wood-button:hover:not(:disabled) {
@@ -207,9 +175,7 @@ button:not(:disabled),
 }
 
 .wood-input {
-  background:
-    linear-gradient(180deg, rgba(63, 38, 20, 0.96), rgba(39, 24, 13, 0.96)),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 12px, transparent 12px 14px);
+  background: linear-gradient(180deg, rgba(63, 38, 20, 0.98), rgba(39, 24, 13, 0.98));
   border: 3px solid var(--wood-strong);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }

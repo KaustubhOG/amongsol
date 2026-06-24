@@ -48,6 +48,7 @@ export default function MeetingPage() {
   const [players, setPlayers] = useState<Player[]>(initialState.players);
   const [callerColor, setCallerColor] = useState(initialState.callerColor);
   const [error, setError] = useState("");
+  const [startingVote, setStartingVote] = useState(false);
 
   useEffect(() => {
     if (initialState.roomState === "lobby") {
@@ -85,14 +86,17 @@ export default function MeetingPage() {
       }
 
       if (msg.type === "VotingStarted") {
+        setStartingVote(false);
         router.push(`/vote/${roomId}`);
       }
 
       if (msg.type === "GameOver") {
+        setStartingVote(false);
         router.push(`/results/${roomId}`);
       }
 
       if (msg.type === "Error") {
+        setStartingVote(false);
         setError(msg.message as string);
       }
     });
@@ -101,12 +105,14 @@ export default function MeetingPage() {
   }, [initialState.roomState, roomId, router]);
 
   function handleVote() {
+    if (startingVote) return;
+    setStartingVote(true);
     socket.send({ type: "StartVoting" });
   }
 
   return (
-    <main className="min-h-screen px-6 py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col gap-6">
+    <main className="page-shell">
+      <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col gap-6">
         <RoomHeader
           badge="emergency meeting"
           title="Review the Round"
@@ -116,10 +122,18 @@ export default function MeetingPage() {
           action={
             <button
               onClick={handleVote}
+              disabled={startingVote}
               className="hover-lift wood-button px-5 py-3 text-sm font-bold tracking-widest uppercase"
               style={{ color: "#ff4444" }}
             >
-              Start Vote
+              {startingVote ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
+                  starting...
+                </span>
+              ) : (
+                "Start Vote"
+              )}
             </button>
           }
         />

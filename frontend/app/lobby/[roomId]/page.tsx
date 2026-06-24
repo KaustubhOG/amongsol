@@ -88,6 +88,7 @@ export default function LobbyPage() {
       }
 
       if (msg.type === "Error") {
+        setStarting(false);
         setError(msg.message as string);
       }
     });
@@ -102,8 +103,8 @@ export default function LobbyPage() {
   }
 
   return (
-    <main className="min-h-screen px-6 py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col justify-between gap-8">
+    <main className="page-shell">
+      <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col justify-between gap-8">
         <RoomHeader
           badge="solsabotage"
           title="Waiting Room"
@@ -111,7 +112,7 @@ export default function LobbyPage() {
           roomId={roomId}
           accent="var(--green)"
           action={
-            <div className="min-w-56 border px-4 py-3 text-sm" style={{ borderColor: "var(--border)" }}>
+            <div className="wood-panel-soft min-w-56 px-4 py-3 text-sm">
               <div className="flex items-center justify-between">
                 <span style={{ color: "var(--muted)" }}>players</span>
                 <span>{players.length}/4</span>
@@ -189,7 +190,14 @@ export default function LobbyPage() {
                 className="hover-lift wood-button mt-auto w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
                 style={{ color: "var(--green)" }}
               >
-                {starting ? "starting..." : "Start Round"}
+                {starting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
+                    starting...
+                  </span>
+                ) : (
+                  "Start Round"
+                )}
               </button>
             ) : (
               <div className="wood-panel-soft mt-auto px-3 py-2 text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>

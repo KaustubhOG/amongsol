@@ -189,6 +189,7 @@ export default function GamePage() {
       }
 
       if (msg.type === "Error") {
+        setPendingAction(null);
         setError(msg.message as string);
       }
     });
@@ -236,9 +237,9 @@ export default function GamePage() {
   const myPlayer = players.find((player) => player.color === myColor);
 
   return (
-    <main className="min-h-screen">
-      <div className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="wood-panel flex min-h-screen flex-col overflow-hidden">
+    <main className="page-shell">
+      <div className="page-frame grid min-h-[calc(100vh-3rem)] lg:grid-cols-[minmax(0,1fr)_320px]">
+        <section className="wood-panel flex min-h-full flex-col overflow-hidden">
           <RoomHeader
             badge="solsabotage"
             title="Code Room"
@@ -262,7 +263,14 @@ export default function GamePage() {
                   className="hover-lift wood-button px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
                   style={{ color: "#ff4444" }}
                 >
-                  {pendingAction === "meeting" ? "Calling..." : "Call Meeting"}
+                  {pendingAction === "meeting" ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
+                      calling...
+                    </span>
+                  ) : (
+                    "Call Meeting"
+                  )}
                 </button>
               </div>
             }
@@ -372,7 +380,7 @@ export default function GamePage() {
           </div>
         </section>
 
-          <aside className="wood-panel flex min-h-screen flex-col gap-6 overflow-hidden px-5 py-6">
+          <aside className="wood-panel flex min-h-full flex-col gap-6 overflow-hidden px-5 py-6">
             <div className="flex flex-col gap-3">
               <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
                 Objective
@@ -446,7 +454,14 @@ export default function GamePage() {
             className="hover-lift wood-button mt-auto w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
             style={{ color: "var(--green)" }}
           >
-            {pendingAction === "tests" ? "Running tests..." : "Run Tests"}
+            {pendingAction === "tests" ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
+                running...
+              </span>
+            ) : (
+              "Run Tests"
+            )}
           </button>
         </aside>
       </div>

@@ -58,9 +58,9 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen px-6 py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col items-center justify-center gap-8">
-        <div className="wood-panel flex w-full max-w-2xl flex-col gap-5 p-6 text-center">
+    <main className="page-shell">
+      <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col items-center justify-center gap-8">
+        <div className="wood-panel flex w-full max-w-2xl flex-col items-center gap-5 p-6 text-center">
           <div className="flex flex-col items-center gap-2">
             <h1 className="text-5xl font-bold tracking-tight" style={{ color: "var(--green)" }}>
               SolSabotage
@@ -74,48 +74,62 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="wood-panel flex w-full max-w-lg flex-col gap-4 p-5">
-        <input
-          type="text"
-          placeholder="your wallet address"
-          value={wallet}
-          onChange={(e) => setWallet(e.target.value)}
-          className="wood-input w-full px-3 py-2 text-sm outline-none"
-          style={{ color: "var(--text)" }}
-        />
+        <div className="wood-panel flex w-full max-w-lg flex-col items-center gap-4 p-5">
+          <input
+            type="text"
+            placeholder="your wallet address"
+            value={wallet}
+            onChange={(e) => setWallet(e.target.value)}
+            className="wood-input w-full px-3 py-2 text-sm outline-none"
+            style={{ color: "var(--text)" }}
+          />
 
-        <button
-          onClick={handleCreate}
-          disabled={loadingAction !== null}
-          className="hover-lift wood-button w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
-          style={{ color: "var(--green)" }}
-        >
-          {loadingAction === "create" ? "creating..." : "Create Game"}
-        </button>
+          <button
+            onClick={handleCreate}
+            disabled={loadingAction !== null}
+            className="hover-lift wood-button w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
+            style={{ color: "var(--green)" }}
+          >
+            {loadingAction === "create" ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
+                creating...
+              </span>
+            ) : (
+              "Create Game"
+            )}
+          </button>
 
-        <div className="wood-panel-soft flex flex-col gap-2 p-4">
-          <p className="text-xs" style={{ color: "var(--muted)" }}>
-            or join a game
-          </p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="ROOM ID"
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value)}
-              className="wood-input flex-1 px-3 py-2 text-sm outline-none uppercase tracking-widest"
-              style={{ color: "var(--text)" }}
-            />
-            <button
-              onClick={handleJoin}
-              disabled={loadingAction !== null}
-              className="hover-lift wood-button px-4 py-2 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
-              style={{ color: "#f4f1ea" }}
-            >
-              {loadingAction === "join" ? "joining..." : "Join"}
-            </button>
+          <div className="wood-panel-soft flex w-full flex-col gap-2 p-4">
+            <p className="text-xs" style={{ color: "var(--muted)" }}>
+              or join a game
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="ROOM ID"
+                value={roomId}
+                onChange={(e) => setRoomId(e.target.value)}
+                className="wood-input flex-1 px-3 py-2 text-sm outline-none uppercase tracking-widest"
+                style={{ color: "var(--text)" }}
+              />
+              <button
+                onClick={handleJoin}
+                disabled={loadingAction !== null}
+                className="hover-lift wood-button px-4 py-2 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
+                style={{ color: "#f4f1ea" }}
+              >
+                {loadingAction === "join" ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
+                    joining...
+                  </span>
+                ) : (
+                  "Join"
+                )}
+              </button>
+            </div>
           </div>
-        </div>
           {error && (
             <p className="text-xs text-center" style={{ color: "#ff4444" }}>
               {error}

@@ -25,7 +25,7 @@ export default function RoomHeader({ badge, title, description, roomId, accent, 
   }
 
   return (
-    <div className="wood-panel flex items-start justify-between gap-6 p-5">
+    <div className="wood-panel flex flex-col gap-4 p-5 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex flex-col gap-2">
         <span className="text-xs font-bold tracking-widest uppercase" style={{ color: accent }}>
           {badge}
@@ -41,6 +41,8 @@ export default function RoomHeader({ badge, title, description, roomId, accent, 
               className="hover-lift wood-button px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase"
               style={{ color: accent }}
               type="button"
+              aria-label={`Copy room id ${roomId}`}
+              title="Copy room id"
             >
               {copied ? "copied" : "copy"}
             </button>
@@ -48,7 +50,7 @@ export default function RoomHeader({ badge, title, description, roomId, accent, 
         </div>
       </div>
 
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="shrink-0 lg:pt-1">{action}</div>}
     </div>
   );
 }

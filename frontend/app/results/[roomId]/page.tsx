@@ -47,8 +47,8 @@ export default function ResultsPage() {
   const civiliansWon = result?.winner === "civilians";
 
   return (
-    <main className="min-h-screen px-6 py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col justify-between gap-8">
+    <main className="page-shell">
+      <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col justify-between gap-8">
         <RoomHeader
           badge={civiliansWon ? "impostor found" : "impostor escaped"}
           title={civiliansWon ? "Engineers Held the Line" : "Sabotage Succeeded"}
