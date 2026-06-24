@@ -116,8 +116,8 @@ export default function MeetingPage() {
           action={
             <button
               onClick={handleVote}
-              className="hover-lift border px-5 py-3 text-sm font-bold tracking-widest uppercase"
-              style={{ borderColor: "#ff4444", color: "#ff4444" }}
+              className="hover-lift wood-button px-5 py-3 text-sm font-bold tracking-widest uppercase"
+              style={{ color: "#ff4444" }}
             >
               Start Vote
             </button>
@@ -125,13 +125,13 @@ export default function MeetingPage() {
         />
 
         <div className="grid gap-6 lg:grid-cols-[1.35fr_0.85fr]">
-          <section className="flex flex-col gap-3">
+          <section className="wood-panel flex flex-col gap-3 p-5">
             <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
               Edit History
             </p>
 
             {editHistory.length === 0 && (
-              <div className="border px-4 py-6 text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
+              <div className="wood-panel-soft px-4 py-6 text-sm" style={{ color: "var(--muted)" }}>
                 no test history recorded yet
               </div>
             )}
@@ -139,8 +139,7 @@ export default function MeetingPage() {
             {editHistory.map((entry, index) => (
               <div
                 key={`${entry.cursor_color}-${entry.timestamp}-${index}`}
-                className="grid items-center gap-3 border px-4 py-4 text-sm sm:grid-cols-[auto_1fr_auto_auto]"
-                style={{ borderColor: "var(--border)" }}
+                className="wood-panel-soft grid items-center gap-3 px-4 py-4 text-sm sm:grid-cols-[auto_1fr_auto_auto]"
               >
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.cursor_color }} />
@@ -155,8 +154,8 @@ export default function MeetingPage() {
             ))}
           </section>
 
-          <aside className="flex flex-col gap-4">
-            <div className="border p-4" style={{ borderColor: "var(--border)" }}>
+          <aside className="wood-panel flex flex-col gap-4 p-5">
+            <div className="wood-panel-soft p-4">
               <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
                 Players
               </p>
@@ -173,12 +172,12 @@ export default function MeetingPage() {
               </div>
             </div>
 
-            <div className="border p-4 text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
+            <div className="wood-panel-soft p-4 text-sm" style={{ color: "var(--muted)" }}>
               Compare who touched failing runs, who called the meeting, and who is defending a broken result.
             </div>
 
             {error && (
-              <div className="border px-4 py-3 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+              <div className="wood-panel-soft px-4 py-3 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
                 {error}
               </div>
             )}

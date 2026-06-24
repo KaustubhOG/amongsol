@@ -98,14 +98,11 @@ export default function VotePage() {
           accent="#ff4444"
         />
 
-        <div className="flex flex-col gap-3">
+        <div className="wood-panel flex flex-col gap-3 p-5">
           {players.map((player) => (
             <div
               key={player.wallet}
-              className="grid items-center gap-4 border px-4 py-4 sm:grid-cols-[auto_1fr_auto_auto]"
-              style={{
-                borderColor: votedWallet === player.wallet ? "#ff4444" : "var(--border)",
-              }}
+              className="wood-panel-soft grid items-center gap-4 px-4 py-4 sm:grid-cols-[auto_1fr_auto_auto]"
             >
               <div className="flex items-center gap-3">
                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: player.color }} />
@@ -120,9 +117,8 @@ export default function VotePage() {
               <button
                 onClick={() => handleVote(player)}
                 disabled={votedWallet !== null}
-                className="hover-lift border px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
+                className="hover-lift wood-button px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
                 style={{
-                  borderColor: votedWallet === player.wallet ? "#ff4444" : "var(--border)",
                   color: votedWallet === player.wallet ? "#ff4444" : "var(--text)",
                 }}
               >
@@ -133,7 +129,7 @@ export default function VotePage() {
         </div>
 
         {error && (
-          <div className="border px-4 py-3 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+          <div className="wood-panel-soft px-4 py-3 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
             {error}
           </div>
         )}

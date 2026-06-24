@@ -238,7 +238,7 @@ export default function GamePage() {
   return (
     <main className="min-h-screen">
       <div className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="flex min-h-screen flex-col border-r" style={{ borderColor: "var(--border)" }}>
+        <section className="wood-panel flex min-h-screen flex-col overflow-hidden">
           <RoomHeader
             badge="solsabotage"
             title="Code Room"
@@ -259,8 +259,8 @@ export default function GamePage() {
                 <button
                   onClick={handleMeeting}
                   disabled={locked || pendingAction === "meeting"}
-                  className="hover-lift border px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
-                  style={{ borderColor: "#ff4444", color: "#ff4444" }}
+                  className="hover-lift wood-button px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
+                  style={{ color: "#ff4444" }}
                 >
                   {pendingAction === "meeting" ? "Calling..." : "Call Meeting"}
                 </button>
@@ -276,19 +276,19 @@ export default function GamePage() {
 
           <div className="flex-1 overflow-y-auto px-6 py-5">
             <div className="mb-5 grid gap-3 sm:grid-cols-3">
-              <div className="border px-4 py-3 text-xs" style={{ borderColor: "var(--border)" }}>
+              <div className="wood-panel-soft px-4 py-3 text-xs">
                 <div style={{ color: "var(--muted)" }}>phase</div>
                 <div className="mt-1 font-bold uppercase tracking-widest" style={{ color: locked ? "#ff4444" : "var(--green)" }}>
                   {locked ? "code locked" : pendingAction ? "working" : "editing"}
                 </div>
               </div>
-              <div className="border px-4 py-3 text-xs" style={{ borderColor: "var(--border)" }}>
+              <div className="wood-panel-soft px-4 py-3 text-xs">
                 <div style={{ color: "var(--muted)" }}>cursor map</div>
                 <div className="mt-1 font-bold uppercase tracking-widest" style={{ color: "var(--text)" }}>
                   {Object.keys(cursorByFunction).length ? `${Object.keys(cursorByFunction).length} active` : "tracking"}
                 </div>
               </div>
-              <div className="border px-4 py-3 text-xs" style={{ borderColor: "var(--border)" }}>
+              <div className="wood-panel-soft px-4 py-3 text-xs">
                 <div style={{ color: "var(--muted)" }}>your role</div>
                 <div className="mt-1 font-bold uppercase tracking-widest" style={{ color: role === "impostor" ? "#ff4444" : "var(--green)" }}>
                   {role || "pending"}
@@ -372,12 +372,12 @@ export default function GamePage() {
           </div>
         </section>
 
-        <aside className="flex min-h-screen flex-col gap-6 px-5 py-6">
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
-              Objective
-            </p>
-            <div className="border px-4 py-3 text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
+          <aside className="wood-panel flex min-h-screen flex-col gap-6 overflow-hidden px-5 py-6">
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+                Objective
+              </p>
+            <div className="wood-panel-soft px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
               {role === "impostor"
                 ? "Keep suspicion off yourself and leave the code in a failing state."
                 : "Repair the code, verify it with tests, and identify the saboteur."}
@@ -390,12 +390,12 @@ export default function GamePage() {
             </p>
             <div className="flex flex-col gap-2">
               {testResults.length === 0 && (
-                <div className="border px-4 py-3 text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
+                <div className="wood-panel-soft px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
                   no run yet
                 </div>
               )}
               {testResults.map((result) => (
-                <div key={result.name} className="flex items-center justify-between border px-4 py-3 text-sm" style={{ borderColor: "var(--border)" }}>
+                <div key={result.name} className="wood-panel-soft flex items-center justify-between px-4 py-3 text-sm">
                   <span>{result.name}</span>
                   <span style={{ color: result.passed ? "var(--green)" : "#ff4444" }}>
                     {result.passed ? "pass" : "fail"}
@@ -411,7 +411,7 @@ export default function GamePage() {
             </p>
             <div className="flex flex-col gap-2">
               {visiblePlayers.map((player) => (
-                <div key={player.wallet} className="border px-4 py-3 text-sm" style={{ borderColor: "var(--border)" }}>
+                <div key={player.wallet} className="wood-panel-soft px-4 py-3 text-sm">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full" style={{ backgroundColor: player.color }} />
@@ -435,7 +435,7 @@ export default function GamePage() {
           </div>
 
           {error && (
-            <div className="border px-4 py-3 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+            <div className="wood-panel-soft px-4 py-3 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
               {error}
             </div>
           )}
@@ -443,8 +443,8 @@ export default function GamePage() {
           <button
             onClick={handleRunTests}
             disabled={locked || pendingAction === "tests"}
-            className="hover-lift mt-auto w-full border py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
-            style={{ borderColor: "var(--green)", color: "var(--green)" }}
+            className="hover-lift wood-button mt-auto w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
+            style={{ color: "var(--green)" }}
           >
             {pendingAction === "tests" ? "Running tests..." : "Run Tests"}
           </button>

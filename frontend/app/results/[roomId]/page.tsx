@@ -58,7 +58,7 @@ export default function ResultsPage() {
         />
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="border p-5" style={{ borderColor: "var(--border)" }}>
+          <div className="wood-panel p-5">
             <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
               Result
             </p>
@@ -69,7 +69,7 @@ export default function ResultsPage() {
             </p>
           </div>
 
-          <div className="border p-5" style={{ borderColor: "var(--border)" }}>
+          <div className="wood-panel p-5">
             <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
               Room
             </p>
@@ -80,7 +80,7 @@ export default function ResultsPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="border px-4 py-3 text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
+          <div className="wood-panel-soft px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
             {!result
               ? "waiting for result"
               : civiliansWon
@@ -88,7 +88,7 @@ export default function ResultsPage() {
                 : "The final code state or the vote favored the impostor."}
           </div>
 
-          <div className="flex flex-col gap-4 border p-5" style={{ borderColor: "var(--border)" }}>
+          <div className="wood-panel flex flex-col gap-4 p-5">
             <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
               Next
             </p>
@@ -97,8 +97,8 @@ export default function ResultsPage() {
             </p>
             <button
               onClick={handleExit}
-              className="hover-lift mt-auto border px-8 py-3 text-sm font-bold tracking-widest uppercase"
-              style={{ borderColor: "var(--green)", color: "var(--green)" }}
+              className="hover-lift wood-button mt-auto px-8 py-3 text-sm font-bold tracking-widest uppercase"
+              style={{ color: "var(--green)" }}
             >
               Return Home
             </button>

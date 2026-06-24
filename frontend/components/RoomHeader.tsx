@@ -25,7 +25,7 @@ export default function RoomHeader({ badge, title, description, roomId, accent, 
   }
 
   return (
-    <div className="flex items-start justify-between gap-6 border-b pb-5" style={{ borderColor: "var(--border)" }}>
+    <div className="wood-panel flex items-start justify-between gap-6 p-5">
       <div className="flex flex-col gap-2">
         <span className="text-xs font-bold tracking-widest uppercase" style={{ color: accent }}>
           {badge}
@@ -33,13 +33,13 @@ export default function RoomHeader({ badge, title, description, roomId, accent, 
         <h1 className="text-3xl font-bold">{title}</h1>
         <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: "var(--muted)" }}>
           <span>{description}</span>
-          <span className="inline-flex items-center gap-2 border px-2 py-1 text-xs" style={{ borderColor: "var(--border)" }}>
+          <span className="wood-chip inline-flex items-center gap-2 px-2 py-1 text-xs">
             <span style={{ color: "var(--muted)" }}>room</span>
             <span>{roomId}</span>
             <button
               onClick={handleCopy}
-              className="hover-lift border px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase"
-              style={{ borderColor: accent, color: accent }}
+              className="hover-lift wood-button px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase"
+              style={{ color: accent }}
               type="button"
             >
               {copied ? "copied" : "copy"}

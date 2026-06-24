@@ -127,7 +127,7 @@ export default function LobbyPage() {
         <div className="grid flex-1 gap-6 lg:grid-cols-[1.4fr_0.9fr]">
           <section className="flex flex-col gap-3">
             {players.length === 0 && (
-              <div className="border px-4 py-6 text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
+              <div className="wood-panel-soft px-4 py-6 text-sm" style={{ color: "var(--muted)" }}>
                 waiting for server
               </div>
             )}
@@ -135,8 +135,7 @@ export default function LobbyPage() {
             {players.map((player) => (
               <div
                 key={player.wallet}
-                className="grid items-center gap-4 border px-4 py-4 sm:grid-cols-[auto_1fr_auto]"
-                style={{ borderColor: "var(--border)" }}
+                className="wood-panel-soft grid items-center gap-4 px-4 py-4 sm:grid-cols-[auto_1fr_auto]"
               >
                 <div className="flex items-center gap-3">
                   <div className="h-2 w-2 rounded-full" style={{ backgroundColor: player.color }} />
@@ -152,7 +151,7 @@ export default function LobbyPage() {
             ))}
           </section>
 
-          <aside className="flex flex-col gap-4 border p-5" style={{ borderColor: "var(--border)" }}>
+          <aside className="wood-panel flex flex-col gap-4 p-5">
             <div className="flex flex-col gap-2">
               <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
                 Round Flow
@@ -178,7 +177,7 @@ export default function LobbyPage() {
             </div>
 
             {error && (
-              <div className="border px-3 py-2 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+              <div className="wood-panel-soft px-3 py-2 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
                 {error}
               </div>
             )}
@@ -187,13 +186,13 @@ export default function LobbyPage() {
               <button
                 onClick={handleStart}
                 disabled={players.length < 2 || starting}
-                className="hover-lift mt-auto w-full border py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
-                style={{ borderColor: "var(--green)", color: "var(--green)" }}
+                className="hover-lift wood-button mt-auto w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
+                style={{ color: "var(--green)" }}
               >
                 {starting ? "starting..." : "Start Round"}
               </button>
             ) : (
-              <div className="mt-auto border px-3 py-2 text-xs font-bold tracking-widest uppercase" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
+              <div className="wood-panel-soft mt-auto px-3 py-2 text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
                 waiting for host
               </div>
             )}

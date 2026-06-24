@@ -58,36 +58,42 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-8">
-      <div className="flex flex-col items-center gap-2">
-        <h1 className="text-5xl font-bold tracking-tight" style={{ color: "var(--green)" }}>
-          SolSabotage
-        </h1>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Fix code. Find the traitor. Win SOL.
-        </p>
-      </div>
+    <main className="min-h-screen px-6 py-8">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col items-center justify-center gap-8">
+        <div className="wood-panel flex w-full max-w-2xl flex-col gap-5 p-6 text-center">
+          <div className="flex flex-col items-center gap-2">
+            <h1 className="text-5xl font-bold tracking-tight" style={{ color: "var(--green)" }}>
+              SolSabotage
+            </h1>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
+              Fix code. Find the traitor. Win SOL.
+            </p>
+          </div>
+          <p className="text-sm leading-6" style={{ color: "var(--muted)" }}>
+            A blocky world where the background stays fixed and the rooms are built from wood panels.
+          </p>
+        </div>
 
-      <div className="flex flex-col gap-4 w-80">
+        <div className="wood-panel flex w-full max-w-lg flex-col gap-4 p-5">
         <input
           type="text"
           placeholder="your wallet address"
           value={wallet}
           onChange={(e) => setWallet(e.target.value)}
-          className="w-full bg-transparent border px-3 py-2 text-sm outline-none"
-          style={{ borderColor: "var(--border)", color: "var(--text)" }}
+          className="wood-input w-full px-3 py-2 text-sm outline-none"
+          style={{ color: "var(--text)" }}
         />
 
         <button
           onClick={handleCreate}
           disabled={loadingAction !== null}
-          className="hover-lift w-full border py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
-          style={{ borderColor: "var(--green)", color: "var(--green)" }}
+          className="hover-lift wood-button w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
+          style={{ color: "var(--green)" }}
         >
           {loadingAction === "create" ? "creating..." : "Create Game"}
         </button>
 
-        <div className="flex flex-col gap-2 p-4 border" style={{ borderColor: "var(--border)" }}>
+        <div className="wood-panel-soft flex flex-col gap-2 p-4">
           <p className="text-xs" style={{ color: "var(--muted)" }}>
             or join a game
           </p>
@@ -97,29 +103,29 @@ export default function Home() {
               placeholder="ROOM ID"
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
-              className="flex-1 bg-transparent border px-3 py-2 text-sm outline-none uppercase tracking-widest"
-              style={{ borderColor: "var(--border)", color: "var(--text)" }}
+              className="wood-input flex-1 px-3 py-2 text-sm outline-none uppercase tracking-widest"
+              style={{ color: "var(--text)" }}
             />
             <button
               onClick={handleJoin}
               disabled={loadingAction !== null}
-              className="hover-lift px-4 py-2 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
-              style={{ backgroundColor: "var(--green)", color: "#0f0f0f" }}
+              className="hover-lift wood-button px-4 py-2 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
+              style={{ color: "#f4f1ea" }}
             >
               {loadingAction === "join" ? "joining..." : "Join"}
             </button>
           </div>
         </div>
+          {error && (
+            <p className="text-xs text-center" style={{ color: "#ff4444" }}>
+              {error}
+            </p>
+          )}
 
-        {error && (
-          <p className="text-xs text-center" style={{ color: "#ff4444" }}>
-            {error}
+          <p className="text-center text-xs" style={{ color: "var(--muted)" }}>
+            3 - 4 players · find the impostor
           </p>
-        )}
-
-        <p className="text-center text-xs" style={{ color: "var(--muted)" }}>
-          3 - 4 players · find the impostor
-        </p>
+        </div>
       </div>
     </main>
   );
