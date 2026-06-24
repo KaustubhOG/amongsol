@@ -1,5 +1,5 @@
 [build]
-buildCommand = "rustup install nightly && cargo +nightly build --release"
+buildCommand = "rustup install nightly && cargo +nightly build --release && mkdir -p bin && cp target/release/amongsol-backend bin/amongsol_backend"
 
 [deploy]
 startCommand = "./bin/amongsol_backend"
