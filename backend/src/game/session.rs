@@ -51,6 +51,8 @@ pub struct Player {
     pub cursor_color: String,
     pub is_host: bool,
     pub conn_id: String,
+    pub stake_lamports: u64,
+    pub stake_signature: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,9 +107,12 @@ pub struct GameSession {
     pub meeting_caller_color: Option<String>,
     pub timer_stopped: Arc<AtomicBool>,
     pub started_at: Option<u64>,
+    pub stake_lamports: u64,
 }
 
 impl GameSession {
+    pub const DEFAULT_STAKE_LAMPORTS: u64 = 100_000_000;
+
     pub fn new(id: String, map: GameMap) -> Self {
         Self {
             id,
@@ -125,6 +130,7 @@ impl GameSession {
             meeting_caller_color: None,
             timer_stopped: Arc::new(AtomicBool::new(false)),
             started_at: None,
+            stake_lamports: Self::DEFAULT_STAKE_LAMPORTS,
         }
     }
 
@@ -143,6 +149,8 @@ impl GameSession {
             cursor_color: color,
             is_host,
             conn_id,
+            stake_lamports: 0,
+            stake_signature: None,
         };
         self.players.push(player.clone());
         Ok(player)
@@ -173,6 +181,69 @@ impl GameSession {
 
     pub fn player_by_wallet(&self, wallet: &str) -> Option<&Player> {
         self.players.iter().find(|p| p.wallet == wallet)
+    }
+
+    pub fn mark_staked(&mut self, wallet: &str, signature: String) -> Result<(), String> {
+        let player = self
+            .players
+            .iter_mut()
+            .find(|p| p.wallet == wallet)
+            .ok_or_else(|| "player not found".to_string())?;
+
+        player.stake_lamports = self.stake_lamports;
+        player.stake_signature = Some(signature);
+        Ok(())
+    }
+
+    pub fn all_players_staked(&self) -> bool {
+        !self.players.is_empty()
+            && self
+                .players
+                .iter()
+                .all(|player| player.stake_lamports >= self.stake_lamports)
+    }
+
+    pub fn payout_summary(&self, winner: &WinnerType) -> PayoutSummary {
+        let total_pot_lamports = self.players.iter().map(|p| p.stake_lamports).sum();
+        let impostor_wallet = self.impostor_wallet().unwrap_or_default();
+        let recipients = match winner {
+            WinnerType::Impostor => {
+                if impostor_wallet.is_empty() {
+                    vec![]
+                } else {
+                    vec![PayoutRecipient {
+                        wallet: impostor_wallet,
+                        lamports: total_pot_lamports,
+                    }]
+                }
+            }
+            WinnerType::Civilians => {
+                let winners = self
+                    .players
+                    .iter()
+                    .filter(|player| player.wallet != impostor_wallet)
+                    .collect::<Vec<_>>();
+                if winners.is_empty() {
+                    vec![]
+                } else {
+                    let share = total_pot_lamports / winners.len() as u64;
+                    let remainder = total_pot_lamports % winners.len() as u64;
+                    winners
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, player)| PayoutRecipient {
+                            wallet: player.wallet.clone(),
+                            lamports: share + u64::from(idx == 0) * remainder,
+                        })
+                        .collect()
+                }
+            }
+        };
+
+        PayoutSummary {
+            total_pot_lamports,
+            recipients,
+        }
     }
 
     pub fn all_conn_ids(&self) -> Vec<String> {
@@ -235,4 +306,16 @@ impl GameSession {
             .as_secs();
         now.saturating_sub(start)
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PayoutRecipient {
+    pub wallet: String,
+    pub lamports: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PayoutSummary {
+    pub total_pot_lamports: u64,
+    pub recipients: Vec<PayoutRecipient>,
 }

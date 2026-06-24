@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import socket from "@/lib/socket";
+import { connectSolanaWallet } from "@/lib/solana";
 
 export default function JoinPage() {
   const router = useRouter();
@@ -17,11 +18,12 @@ export default function JoinPage() {
       return;
     }
 
-    const wallet = socket.ensureWallet();
     setLoading(true);
     setError("");
 
     try {
+      const wallet = await connectSolanaWallet();
+      socket.setWallet(wallet);
       await socket.joinGame(code, wallet);
       router.push(`/lobby/${code}`);
     } catch (err) {

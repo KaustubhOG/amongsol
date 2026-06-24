@@ -1,0 +1,23 @@
+[toolchain]
+solana_version = "2.2.0"
+package_manager = "npm"
+[features]
+seeds = false
+skip-lint = false
+skip-idl = true
+
+[programs.localnet]
+amongsol_staking = "H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA"
+
+[programs.devnet]
+amongsol_staking = "H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "npm run lint --prefix frontend"

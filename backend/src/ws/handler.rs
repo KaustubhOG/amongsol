@@ -60,6 +60,8 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                 color: p.cursor_color.clone(),
                 wallet: p.wallet.clone(),
                 is_host: p.is_host,
+                stake_lamports: p.stake_lamports,
+                stake_signature: p.stake_signature.clone(),
             })
             .collect::<Vec<_>>();
 

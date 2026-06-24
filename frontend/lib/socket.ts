@@ -60,6 +60,12 @@ class SocketClient {
     return this.wallet;
   }
 
+  setWallet(wallet: string) {
+    this.hydrateFromStorage();
+    this.wallet = wallet;
+    this.persist();
+  }
+
   connect(wallet: string) {
     this.hydrateFromStorage();
     if (this.ws?.readyState === WebSocket.OPEN) return;

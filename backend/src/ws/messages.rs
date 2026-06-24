@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::game::session::TestResult;
+use crate::game::session::{PayoutSummary, TestResult};
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
 pub enum ClientMessage {
     JoinGame { game_id: String, wallet: String },
+    ConfirmStake { signature: String },
     StartGame,
     EditCode { function_name: String, code: String },
     RunTests,
@@ -23,12 +24,21 @@ pub enum ServerMessage {
         your_color: String,
         players: Vec<PlayerInfo>,
         state: String,
+        stake_lamports: u64,
+        stake_vault: String,
+        stake_program: String,
     },
     PlayerJoined {
         players: Vec<PlayerInfo>,
     },
     PlayerLeft {
         players: Vec<PlayerInfo>,
+    },
+    StakeUpdated {
+        players: Vec<PlayerInfo>,
+        stake_lamports: u64,
+        stake_vault: String,
+        stake_program: String,
     },
     GameStarted {
         functions: Vec<FunctionInfo>,
@@ -60,6 +70,7 @@ pub enum ServerMessage {
         winner: String,
         impostor_color: String,
         impostor_wallet: String,
+        payout: PayoutSummary,
     },
     Error {
         message: String,
@@ -71,6 +82,8 @@ pub struct PlayerInfo {
     pub color: String,
     pub wallet: String,
     pub is_host: bool,
+    pub stake_lamports: u64,
+    pub stake_signature: Option<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]

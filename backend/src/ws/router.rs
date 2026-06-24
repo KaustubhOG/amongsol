@@ -13,6 +13,9 @@ pub async fn handle_client_message(msg: ClientMessage, conn_id: &str, state: &Ap
         ClientMessage::JoinGame { game_id, wallet } => {
             handle_join(conn_id, game_id, wallet, state).await
         }
+        ClientMessage::ConfirmStake { signature } => {
+            handle_confirm_stake(conn_id, signature, state).await
+        }
         ClientMessage::StartGame => handle_start_game(conn_id, state).await,
         ClientMessage::EditCode {
             function_name,
@@ -108,6 +111,9 @@ async fn handle_join(conn_id: &str, game_id: String, wallet: String, state: &App
                         .to_string(),
                         impostor_color: session.impostor_color().unwrap_or_default(),
                         impostor_wallet: session.impostor_wallet().unwrap_or_default(),
+                        payout: session.payout_summary(
+                            &session.winner.clone().unwrap_or(WinnerType::Impostor),
+                        ),
                     });
 
                 (
@@ -135,6 +141,8 @@ async fn handle_join(conn_id: &str, game_id: String, wallet: String, state: &App
                     color: p.cursor_color.clone(),
                     wallet: p.wallet.clone(),
                     is_host: p.is_host,
+                    stake_lamports: p.stake_lamports,
+                    stake_signature: p.stake_signature.clone(),
                 })
                 .collect();
 
@@ -145,6 +153,14 @@ async fn handle_join(conn_id: &str, game_id: String, wallet: String, state: &App
                     your_color,
                     players: player_infos.clone(),
                     state: state_name,
+                    stake_lamports: state
+                        .game_manager
+                        .sessions
+                        .get(&game_id)
+                        .map(|session| session.stake_lamports)
+                        .unwrap_or_default(),
+                    stake_vault: stake_vault_address(),
+                    stake_program: stake_program_id(),
                 },
                 state,
             )
@@ -244,6 +260,26 @@ async fn handle_start_game(conn_id: &str, state: &AppState) {
         return;
     }
 
+    let staked = {
+        let session = match state.game_manager.sessions.get(&game_id) {
+            Some(s) => s,
+            None => return,
+        };
+        session.all_players_staked()
+    };
+
+    if !staked {
+        send_to_conn(
+            conn_id,
+            ServerMessage::Error {
+                message: "all players must stake before starting".to_string(),
+            },
+            state,
+        )
+        .await;
+        return;
+    }
+
     let functions = {
         let mut session = match state.game_manager.sessions.get_mut(&game_id) {
             Some(s) => s,
@@ -290,6 +326,68 @@ async fn handle_start_game(conn_id: &str, state: &AppState) {
         state.connections.clone(),
         state.db.clone(),
     );
+}
+
+async fn handle_confirm_stake(conn_id: &str, signature: String, state: &AppState) {
+    let game_id = match state.game_manager.find_game_by_conn(conn_id) {
+        Some(id) => id,
+        None => return,
+    };
+
+    let wallet = {
+        let session = match state.game_manager.sessions.get(&game_id) {
+            Some(s) => s,
+            None => return,
+        };
+
+        if session.state != GameState::Lobby {
+            send_to_conn(
+                conn_id,
+                ServerMessage::Error {
+                    message: "cannot stake after round start".to_string(),
+                },
+                state,
+            )
+            .await;
+            return;
+        }
+
+        match session.player_by_conn(conn_id) {
+            Some(player) => player.wallet.clone(),
+            None => return,
+        }
+    };
+
+    if let Err(message) = verify_stake_signature(&signature, &wallet).await {
+        send_to_conn(conn_id, ServerMessage::Error { message }, state).await;
+        return;
+    }
+
+    let (players, stake_lamports) = {
+        let mut session = match state.game_manager.sessions.get_mut(&game_id) {
+            Some(s) => s,
+            None => return,
+        };
+
+        if let Err(message) = session.mark_staked(&wallet, signature) {
+            send_to_conn(conn_id, ServerMessage::Error { message }, state).await;
+            return;
+        }
+
+        (player_infos(&session), session.stake_lamports)
+    };
+
+    broadcast_to_game(
+        &game_id,
+        ServerMessage::StakeUpdated {
+            players,
+            stake_lamports,
+            stake_vault: stake_vault_address(),
+            stake_program: stake_program_id(),
+        },
+        state,
+    )
+    .await;
 }
 
 async fn handle_edit(conn_id: &str, function_name: String, code: String, state: &AppState) {
@@ -620,7 +718,7 @@ async fn broadcast_roles(game_id: &str, state: &AppState) {
 }
 
 pub async fn finish_game(game_id: &str, winner_type: WinnerType, state: &AppState) {
-    let (winner_str, impostor_color, impostor_wallet, duration, player_count) = {
+    let (winner_str, impostor_color, impostor_wallet, payout, duration, player_count) = {
         let mut session = match state.game_manager.sessions.get_mut(game_id) {
             Some(s) => s,
             None => return,
@@ -631,9 +729,10 @@ pub async fn finish_game(game_id: &str, winner_type: WinnerType, state: &AppStat
         session.timer_stopped.store(true, Ordering::SeqCst);
 
         (
-            winner_label(winner_type).to_string(),
+            winner_label(winner_type.clone()).to_string(),
             session.impostor_color().unwrap_or_default(),
             session.impostor_wallet().unwrap_or_default(),
+            session.payout_summary(&winner_type),
             session.elapsed_secs(),
             session.players.len() as i32,
         )
@@ -645,6 +744,7 @@ pub async fn finish_game(game_id: &str, winner_type: WinnerType, state: &AppStat
             winner: winner_str.clone(),
             impostor_color: impostor_color.clone(),
             impostor_wallet: impostor_wallet.clone(),
+            payout: payout.clone(),
         },
         state,
     )
@@ -665,6 +765,85 @@ pub async fn finish_game(game_id: &str, winner_type: WinnerType, state: &AppStat
         .execute(&*db)
         .await;
     });
+}
+
+fn player_infos(session: &crate::game::session::GameSession) -> Vec<PlayerInfo> {
+    session
+        .players
+        .iter()
+        .map(|p| PlayerInfo {
+            color: p.cursor_color.clone(),
+            wallet: p.wallet.clone(),
+            is_host: p.is_host,
+            stake_lamports: p.stake_lamports,
+            stake_signature: p.stake_signature.clone(),
+        })
+        .collect()
+}
+
+fn stake_vault_address() -> String {
+    "derived from Anchor room escrow".to_string()
+}
+
+fn stake_program_id() -> String {
+    std::env::var("AMONGSOL_STAKING_PROGRAM_ID")
+        .unwrap_or_else(|_| "H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA".to_string())
+}
+
+async fn verify_stake_signature(signature: &str, wallet: &str) -> Result<(), String> {
+    let program_id = stake_program_id();
+    if program_id.starts_with("Set ") {
+        return Err("staking program is not configured".to_string());
+    }
+
+    let rpc_url = std::env::var("SOLANA_RPC_URL")
+        .unwrap_or_else(|_| "https://api.devnet.solana.com".to_string());
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getTransaction",
+        "params": [
+            signature,
+            {
+                "encoding": "jsonParsed",
+                "commitment": "confirmed",
+                "maxSupportedTransactionVersion": 0
+            }
+        ]
+    });
+
+    let response = reqwest::Client::new()
+        .post(rpc_url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|_| "could not verify stake transaction".to_string())?;
+    let payload = response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|_| "could not parse stake verification response".to_string())?;
+    let result = payload
+        .get("result")
+        .ok_or_else(|| "stake transaction was not found".to_string())?;
+
+    if result.is_null() {
+        return Err("stake transaction was not confirmed".to_string());
+    }
+
+    if !result
+        .pointer("/meta/err")
+        .map(|value| value.is_null())
+        .unwrap_or(false)
+    {
+        return Err("stake transaction failed on-chain".to_string());
+    }
+
+    let raw = result.to_string();
+    if !raw.contains(wallet) || !raw.contains(&program_id) {
+        return Err("stake transaction does not match this wallet or staking program".to_string());
+    }
+
+    Ok(())
 }
 
 pub async fn broadcast_to_game(game_id: &str, msg: ServerMessage, state: &AppState) {

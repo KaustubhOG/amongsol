@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import socket from "@/lib/socket";
 import { getBackendHttpUrl } from "@/lib/backend";
+import { connectSolanaWallet } from "@/lib/solana";
 
 const maps = [
   {
@@ -26,11 +27,12 @@ export default function CreatePage() {
   const [loadingMap, setLoadingMap] = useState<string | null>(null);
 
   async function handleSelectMap(mapId: string) {
-    const wallet = socket.ensureWallet();
     setError(null);
     setLoadingMap(mapId);
 
     try {
+      const wallet = await connectSolanaWallet();
+      socket.setWallet(wallet);
       const res = await fetch(getBackendHttpUrl("/game/create"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },

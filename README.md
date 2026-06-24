@@ -9,6 +9,7 @@ Players join a room, choose a challenge map, edit code together, run tests, call
 - `backend/` - Axum + WebSocket game server that manages rooms, players, rounds, voting, and game state.
 - `challenges/rust/` - Rust map challenge crates.
 - `challenges/anchor/` - Anchor/Solana map challenge crates.
+- `programs/amongsol_staking/` - Anchor escrow program for room stakes and winner payouts.
 
 ## Core Flow
 
@@ -16,10 +17,12 @@ Players join a room, choose a challenge map, edit code together, run tests, call
 2. Create a room or join an existing room code.
 3. If creating, choose a map: Rust or Anchor.
 4. Enter the lobby and wait for players.
-5. Start the round.
-6. Edit code in the code room, run tests, and call a meeting when needed.
-7. Vote during the emergency meeting.
-8. View the result screen and return home.
+5. Each player connects a Solana wallet and stakes into the room vault.
+6. Start the round once 4 players have staked.
+7. Edit code in the code room, run tests, and call a meeting when needed.
+8. Vote during the emergency meeting.
+9. View the result screen, including the payout split.
+10. The host signs the settlement transaction to release the Anchor vault payout, then everyone can return home.
 
 ## Requirements
 
@@ -36,9 +39,17 @@ Set:
 
 ```bash
 DATABASE_URL=postgres://user:password@localhost:5432/amongsol
+AMONGSOL_STAKING_PROGRAM_ID=vY8RcLmGmzFAHJjbD2asUfM3pUgmKpgisaVUp7rFDeR
 ```
 
 You can place that in a backend `.env` file or export it in your shell before running the server.
+
+The frontend uses Solana devnet by default. To override the RPC endpoint, set:
+
+```bash
+NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
+NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID=vY8RcLmGmzFAHJjbD2asUfM3pUgmKpgisaVUp7rFDeR
+```
 
 ## Project Structure
 
@@ -65,6 +76,8 @@ amongsol/
     components/
     lib/
     package.json
+  programs/
+    amongsol_staking/
   challenges/
     rust/
       transfer/
@@ -148,14 +161,18 @@ Inside `frontend/`:
 - Game rooms are managed in memory for the active server process.
 - WebSocket state drives the lobby, game, meeting, vote, and result views.
 - Each room stores the selected map, and test execution resolves challenges from `challenges/<map>/<challenge>`.
+- Each player must stake before the host can start the room. The default stake is `100_000_000` lamports (`0.1 SOL`).
+- Payouts are calculated from the same game winner state: impostor win pays the full pot to the impostor; civilian win splits the pot among non-impostors.
+- Real escrow deposits use the `amongsol_staking` Anchor program. Deploy it, set `AMONGSOL_STAKING_PROGRAM_ID` on the backend and `NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID` on the frontend, then fund players on the same cluster.
+- The host initializes the room escrow when staking and later signs the result-screen settlement transaction that releases funds from the program vault to the computed winners.
 
 ## Game UI Notes
 
 - Home screen: choose between create and join.
 - Create flow: choose Rust or Anchor.
-- Join flow: enter the room code only.
+- Join flow: connect a Solana wallet and enter the room code.
 - Voting screen: any player can vote any player.
-- Result screen: shows only the winner state and room code.
+- Result screen: shows the winner state, room code, and SOL payout split.
 
 ## Challenge Layout
 
