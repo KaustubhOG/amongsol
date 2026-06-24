@@ -34,6 +34,7 @@ export default function LobbyPage() {
   const [myColor, setMyColor] = useState(initialState.myColor);
   const [isHost, setIsHost] = useState(initialState.isHost);
   const [error, setError] = useState("");
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     if (initialState.state === "playing" || initialState.state === "code_locked") {
@@ -94,6 +95,8 @@ export default function LobbyPage() {
   }, [initialState.state, roomId, router]);
 
   function handleStart() {
+    if (starting) return;
+    setStarting(true);
     socket.send({ type: "StartGame" });
   }
 
@@ -185,11 +188,11 @@ export default function LobbyPage() {
             {isHost ? (
               <button
                 onClick={handleStart}
-                disabled={players.length < 2}
-                className="mt-auto w-full border py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
+                disabled={players.length < 2 || starting}
+                className="hover-lift mt-auto w-full border py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
                 style={{ borderColor: "var(--green)", color: "var(--green)" }}
               >
-                Start Round
+                {starting ? "starting..." : "Start Round"}
               </button>
             ) : (
               <div className="mt-auto border px-3 py-2 text-xs font-bold tracking-widest uppercase" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>

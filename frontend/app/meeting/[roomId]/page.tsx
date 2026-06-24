@@ -19,7 +19,7 @@ interface Player {
 
 function getInitialMeetingState() {
   return {
-    roomState: (socket.getLastMessage("GameJoined")?.state as string | undefined) ?? "lobby",
+    roomState: socket.getCurrentRoomState(),
     editHistory:
       (socket.getLastMessage("MeetingCalled")?.edit_history as EditInfo[] | undefined) ?? [],
     callerColor:
@@ -119,7 +119,7 @@ export default function MeetingPage() {
 
           <button
             onClick={handleVote}
-            className="border px-5 py-3 text-sm font-bold tracking-widest uppercase"
+            className="hover-lift border px-5 py-3 text-sm font-bold tracking-widest uppercase"
             style={{ borderColor: "#ff4444", color: "#ff4444" }}
           >
             Start Vote

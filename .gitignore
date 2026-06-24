@@ -1,1 +1,29 @@
-backend/.env
+# Secrets
+**/.env
+**/.env.*
+
+# Build outputs
+**/target/
+**/.next/
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+**/.turbo/
+**/.cache/
+**/*.tsbuildinfo
+
+# Local tooling
+**/.agents/
+**/.codex/
+
+# Misc
+.DS_Store
+Thumbs.db
+*.pem
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.vercel

@@ -12,7 +12,7 @@ interface Player {
 
 function getInitialVoteState() {
   return {
-    roomState: (socket.getLastMessage("GameJoined")?.state as string | undefined) ?? "lobby",
+    roomState: socket.getCurrentRoomState(),
     players: (socket.getLastMessage("GameJoined")?.players as Player[] | undefined) ?? [],
     voteCounts:
       (socket.getLastMessage("VoteUpdate")?.votes as Record<string, number> | undefined) ?? {},
@@ -121,7 +121,7 @@ export default function VotePage() {
               <button
                 onClick={() => handleVote(player)}
                 disabled={votedWallet !== null}
-                className="border px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
+                className="hover-lift border px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
                 style={{
                   borderColor: votedWallet === player.wallet ? "#ff4444" : "var(--border)",
                   color: votedWallet === player.wallet ? "#ff4444" : "var(--text)",

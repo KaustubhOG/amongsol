@@ -126,6 +126,18 @@ class SocketClient {
     return this.lastMessages[type] ?? null;
   }
 
+  getCurrentRoomState() {
+    this.hydrateFromStorage();
+
+    if (this.lastMessages.GameOver) return "ended";
+    if (this.lastMessages.VotingStarted || this.lastMessages.VoteUpdate) return "voting";
+    if (this.lastMessages.MeetingCalled) return "meeting";
+    if (this.lastMessages.CodeLocked) return "code_locked";
+    if (this.lastMessages.GameStarted) return "playing";
+
+    return (this.lastMessages.GameJoined?.state as string | undefined) ?? "lobby";
+  }
+
   getWallet() {
     this.hydrateFromStorage();
     return this.wallet;

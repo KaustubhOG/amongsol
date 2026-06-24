@@ -27,9 +27,32 @@ interface PlayerStatus {
   functionName: string;
 }
 
+interface CursorPosition {
+  line: number;
+  column: number;
+  label: string;
+}
+
 function formatWallet(wallet: string) {
   if (wallet.length <= 10) return wallet;
   return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+}
+
+function getCursorPosition(source: string, selectionStart: number): CursorPosition {
+  const safeSelection = Math.max(0, Math.min(selectionStart, source.length));
+  const prefix = source.slice(0, safeSelection);
+  const lines = prefix.split("\n");
+  const line = lines.length;
+  const column = (lines[lines.length - 1]?.length ?? 0) + 1;
+  return {
+    line,
+    column,
+    label: `${line}:${column}`,
+  };
+}
+
+function getLineNumbers(source: string) {
+  return source.split("\n").map((_, index) => index + 1);
 }
 
 function getInitialGameState() {
@@ -42,7 +65,7 @@ function getInitialGameState() {
   }, {});
 
   return {
-    roomState: (joined?.state as string | undefined) ?? "lobby",
+    roomState: socket.getCurrentRoomState(),
     myColor: (joined?.your_color as string | undefined) ?? "",
     players: (joined?.players as Player[] | undefined) ?? [],
     role: (socket.getLastMessage("RoleAssigned")?.role as string | undefined) ?? "",
@@ -71,6 +94,8 @@ export default function GamePage() {
   const [myColor, setMyColor] = useState(initialState.myColor);
   const [role, setRole] = useState(initialState.role);
   const [error, setError] = useState("");
+  const [pendingAction, setPendingAction] = useState<"tests" | "meeting" | null>(null);
+  const [cursorByFunction, setCursorByFunction] = useState<Record<string, CursorPosition>>({});
 
   useEffect(() => {
     if (initialState.roomState === "meeting") {
@@ -119,6 +144,7 @@ export default function GamePage() {
 
       if (msg.type === "TestResults") {
         setTestResults(msg.results as TestResult[]);
+        setPendingAction((current) => (current === "tests" ? null : current));
       }
 
       if (msg.type === "PlayerEditing") {
@@ -147,14 +173,17 @@ export default function GamePage() {
       }
 
       if (msg.type === "MeetingCalled") {
+        setPendingAction((current) => (current === "meeting" ? null : current));
         router.push(`/meeting/${roomId}`);
       }
 
       if (msg.type === "VotingStarted") {
+        setPendingAction(null);
         router.push(`/vote/${roomId}`);
       }
 
       if (msg.type === "GameOver") {
+        setPendingAction(null);
         router.push(`/results/${roomId}`);
       }
 
@@ -176,17 +205,27 @@ export default function GamePage() {
     [playerStatuses, players]
   );
 
-  function handleCodeChange(fnName: string, newCode: string) {
+  function handleCodeChange(fnName: string, newCode: string, selectionStart?: number) {
     if (locked) return;
     setCode((prev) => ({ ...prev, [fnName]: newCode }));
+    if (typeof selectionStart === "number") {
+      setCursorByFunction((prev) => ({
+        ...prev,
+        [fnName]: getCursorPosition(newCode, selectionStart),
+      }));
+    }
     socket.send({ type: "EditCode", function_name: fnName, code: newCode });
   }
 
   function handleRunTests() {
+    if (locked || pendingAction) return;
+    setPendingAction("tests");
     socket.send({ type: "RunTests" });
   }
 
   function handleMeeting() {
+    if (locked || pendingAction) return;
+    setPendingAction("meeting");
     socket.send({ type: "CallMeeting" });
   }
 
@@ -223,11 +262,11 @@ export default function GamePage() {
               </span>
               <button
                 onClick={handleMeeting}
-                disabled={locked}
-                className="border px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
+                disabled={locked || pendingAction === "meeting"}
+                className="hover-lift border px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
                 style={{ borderColor: "#ff4444", color: "#ff4444" }}
               >
-                Call Meeting
+                {pendingAction === "meeting" ? "Calling..." : "Call Meeting"}
               </button>
             </div>
           </div>
@@ -239,30 +278,99 @@ export default function GamePage() {
           )}
 
           <div className="flex-1 overflow-y-auto px-6 py-5">
-            <div className="flex flex-col gap-5">
-              {functions.map((fn) => (
-                <div key={fn.name} className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
-                      {fn.name}
-                    </p>
-                    <span className="text-xs" style={{ color: "var(--muted)" }}>
-                      {myPlayer ? formatWallet(myPlayer.wallet) : "connected"}
-                    </span>
-                  </div>
-                  <textarea
-                    value={code[fn.name] ?? ""}
-                    onChange={(event) => handleCodeChange(fn.name, event.target.value)}
-                    disabled={locked}
-                    className="min-h-[320px] w-full resize-none border bg-transparent p-4 text-sm outline-none"
-                    style={{
-                      borderColor: "var(--border)",
-                      color: locked ? "var(--muted)" : "var(--text)",
-                    }}
-                    spellCheck={false}
-                  />
+            <div className="mb-5 grid gap-3 sm:grid-cols-3">
+              <div className="border px-4 py-3 text-xs" style={{ borderColor: "var(--border)" }}>
+                <div style={{ color: "var(--muted)" }}>phase</div>
+                <div className="mt-1 font-bold uppercase tracking-widest" style={{ color: locked ? "#ff4444" : "var(--green)" }}>
+                  {locked ? "code locked" : pendingAction ? "working" : "editing"}
                 </div>
-              ))}
+              </div>
+              <div className="border px-4 py-3 text-xs" style={{ borderColor: "var(--border)" }}>
+                <div style={{ color: "var(--muted)" }}>cursor map</div>
+                <div className="mt-1 font-bold uppercase tracking-widest" style={{ color: "var(--text)" }}>
+                  {Object.keys(cursorByFunction).length ? `${Object.keys(cursorByFunction).length} active` : "tracking"}
+                </div>
+              </div>
+              <div className="border px-4 py-3 text-xs" style={{ borderColor: "var(--border)" }}>
+                <div style={{ color: "var(--muted)" }}>your role</div>
+                <div className="mt-1 font-bold uppercase tracking-widest" style={{ color: role === "impostor" ? "#ff4444" : "var(--green)" }}>
+                  {role || "pending"}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-5">
+              {functions.map((fn) => {
+                const hasRemoteCursor = Object.values(playerStatuses).some(
+                  (entry) => entry.functionName === fn.name
+                );
+
+                return (
+                  <div key={fn.name} className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+                        {fn.name}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
+                        <span>{myPlayer ? formatWallet(myPlayer.wallet) : "connected"}</span>
+                        {cursorByFunction[fn.name] && (
+                          <span className="cursor-badge border px-2 py-1 uppercase tracking-widest" style={{ borderColor: "var(--green)", color: "var(--green)" }}>
+                            {cursorByFunction[fn.name].label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div
+                      className="editor-shell border"
+                      style={{ borderColor: hasRemoteCursor ? "var(--green)" : "var(--border)" }}
+                    >
+                      <div className="grid grid-cols-[52px_minmax(0,1fr)]">
+                        <div className="editor-gutter select-none px-3 py-4 text-right text-xs leading-6">
+                          {getLineNumbers(code[fn.name] ?? "")
+                            .slice(0, 120)
+                            .map((lineNumber) => (
+                              <div key={lineNumber}>{lineNumber}</div>
+                            ))}
+                        </div>
+                        <div className="relative">
+                          <textarea
+                            value={code[fn.name] ?? ""}
+                            onChange={(event) =>
+                              handleCodeChange(fn.name, event.target.value, event.currentTarget.selectionStart ?? undefined)
+                            }
+                            onSelect={(event) =>
+                              handleCodeChange(fn.name, event.currentTarget.value, event.currentTarget.selectionStart ?? undefined)
+                            }
+                            onKeyUp={(event) =>
+                              handleCodeChange(fn.name, event.currentTarget.value, event.currentTarget.selectionStart ?? undefined)
+                            }
+                            disabled={locked}
+                            className="cursor-text min-h-[320px] w-full resize-none bg-transparent p-4 text-sm outline-none"
+                            style={{
+                              color: locked ? "var(--muted)" : "var(--text)",
+                            }}
+                            spellCheck={false}
+                          />
+                          <div className="pointer-events-none absolute right-3 top-3 flex flex-wrap justify-end gap-2">
+                            {Object.values(playerStatuses)
+                              .filter((entry) => entry.functionName === fn.name)
+                              .map((entry) => (
+                                <span
+                                  key={`${entry.color}-${fn.name}`}
+                                  className="cursor-badge border px-2 py-1 text-[10px] uppercase tracking-widest"
+                                  style={{ borderColor: entry.color, color: entry.color }}
+                                >
+                                  {entry.color} cursor
+                                </span>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -337,11 +445,11 @@ export default function GamePage() {
 
           <button
             onClick={handleRunTests}
-            disabled={locked}
-            className="mt-auto w-full border py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
+            disabled={locked || pendingAction === "tests"}
+            className="hover-lift mt-auto w-full border py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
             style={{ borderColor: "var(--green)", color: "var(--green)" }}
           >
-            Run Tests
+            {pendingAction === "tests" ? "Running tests..." : "Run Tests"}
           </button>
         </aside>
       </div>

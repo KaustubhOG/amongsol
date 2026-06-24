@@ -9,14 +9,14 @@ export default function Home() {
   const [wallet, setWallet] = useState("");
   const [roomId, setRoomId] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<"create" | "join" | null>(null);
 
   async function handleCreate() {
     if (!wallet.trim()) {
       setError("enter a wallet address");
       return;
     }
-    setLoading(true);
+    setLoadingAction("create");
     setError("");
 
     try {
@@ -32,7 +32,7 @@ export default function Home() {
     } catch {
       setError("failed to connect to server");
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
     }
   }
 
@@ -45,7 +45,7 @@ export default function Home() {
       setError("enter a room id");
       return;
     }
-    setLoading(true);
+    setLoadingAction("join");
     try {
       await socket.connectAndWait(wallet.trim());
       socket.send({ type: "JoinGame", game_id: roomId.trim().toUpperCase(), wallet: wallet.trim() });
@@ -53,7 +53,7 @@ export default function Home() {
     } catch {
       setError("failed to connect to server");
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
     }
   }
 
@@ -80,11 +80,11 @@ export default function Home() {
 
         <button
           onClick={handleCreate}
-          disabled={loading}
-          className="w-full py-3 border text-sm font-bold tracking-widest uppercase"
+          disabled={loadingAction !== null}
+          className="hover-lift w-full border py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
           style={{ borderColor: "var(--green)", color: "var(--green)" }}
         >
-          {loading ? "connecting..." : "Create Game"}
+          {loadingAction === "create" ? "creating..." : "Create Game"}
         </button>
 
         <div className="flex flex-col gap-2 p-4 border" style={{ borderColor: "var(--border)" }}>
@@ -102,10 +102,11 @@ export default function Home() {
             />
             <button
               onClick={handleJoin}
-              className="px-4 py-2 text-sm font-bold tracking-widest uppercase"
+              disabled={loadingAction !== null}
+              className="hover-lift px-4 py-2 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
               style={{ backgroundColor: "var(--green)", color: "#0f0f0f" }}
             >
-              Join
+              {loadingAction === "join" ? "joining..." : "Join"}
             </button>
           </div>
         </div>

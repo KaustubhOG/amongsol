@@ -94,7 +94,7 @@ export default function ResultsPage() {
         <div className="flex gap-4">
           <button
             onClick={handleExit}
-            className="border px-8 py-3 text-sm font-bold tracking-widest uppercase"
+            className="hover-lift border px-8 py-3 text-sm font-bold tracking-widest uppercase"
             style={{ borderColor: "var(--green)", color: "var(--green)" }}
           >
             Return Home
