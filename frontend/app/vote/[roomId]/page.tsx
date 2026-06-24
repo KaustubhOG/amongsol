@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import socket from "@/lib/socket";
+import RoomHeader from "@/components/RoomHeader";
 
 interface Player {
   color: string;
@@ -88,16 +89,14 @@ export default function VotePage() {
 
   return (
     <main className="min-h-screen px-6 py-8">
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <div className="flex flex-col gap-2 border-b pb-5" style={{ borderColor: "var(--border)" }}>
-          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "#ff4444" }}>
-            Vote
-          </span>
-          <h1 className="text-3xl font-bold">Who sabotaged the build?</h1>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            each wallet gets one vote
-          </p>
-        </div>
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col gap-6">
+        <RoomHeader
+          badge="vote"
+          title="Who Sabotaged the Build?"
+          description="each wallet gets one vote"
+          roomId={roomId}
+          accent="#ff4444"
+        />
 
         <div className="flex flex-col gap-3">
           {players.map((player) => (

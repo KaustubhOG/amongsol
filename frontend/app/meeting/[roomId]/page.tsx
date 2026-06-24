@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import socket from "@/lib/socket";
+import RoomHeader from "@/components/RoomHeader";
 
 interface EditInfo {
   cursor_color: string;
@@ -105,26 +106,23 @@ export default function MeetingPage() {
 
   return (
     <main className="min-h-screen px-6 py-8">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <div className="flex items-center justify-between gap-6 border-b pb-5" style={{ borderColor: "var(--border)" }}>
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "#ff4444" }}>
-              Emergency Meeting
-            </span>
-            <h1 className="text-3xl font-bold">Review the round</h1>
-            <p className="text-sm" style={{ color: "var(--muted)" }}>
-              {callerColor ? `${callerColor} called the meeting` : "meeting active"}
-            </p>
-          </div>
-
-          <button
-            onClick={handleVote}
-            className="hover-lift border px-5 py-3 text-sm font-bold tracking-widest uppercase"
-            style={{ borderColor: "#ff4444", color: "#ff4444" }}
-          >
-            Start Vote
-          </button>
-        </div>
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col gap-6">
+        <RoomHeader
+          badge="emergency meeting"
+          title="Review the Round"
+          description={callerColor ? `${callerColor} called the meeting` : "meeting active"}
+          roomId={roomId}
+          accent="#ff4444"
+          action={
+            <button
+              onClick={handleVote}
+              className="hover-lift border px-5 py-3 text-sm font-bold tracking-widest uppercase"
+              style={{ borderColor: "#ff4444", color: "#ff4444" }}
+            >
+              Start Vote
+            </button>
+          }
+        />
 
         <div className="grid gap-6 lg:grid-cols-[1.35fr_0.85fr]">
           <section className="flex flex-col gap-3">

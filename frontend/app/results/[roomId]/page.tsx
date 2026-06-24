@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import socket from "@/lib/socket";
+import RoomHeader from "@/components/RoomHeader";
 
 interface GameOverState {
   winner: string;
@@ -47,23 +48,16 @@ export default function ResultsPage() {
 
   return (
     <main className="min-h-screen px-6 py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-4xl flex-col justify-between gap-8">
-        <div className="flex flex-col gap-4 border-b pb-6" style={{ borderColor: "var(--border)" }}>
-          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: civiliansWon ? "var(--green)" : "#ff4444" }}>
-            {civiliansWon ? "impostor found" : "impostor escaped"}
-          </span>
-          <h1 className="text-4xl font-bold">
-            {civiliansWon ? "Engineers held the line" : "Sabotage succeeded"}
-          </h1>
-          {result && (
-            <div className="flex items-center gap-3 text-sm" style={{ color: "var(--muted)" }}>
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: result.impostor_color }} />
-              <span>{formatWallet(result.impostor_wallet)} was the impostor</span>
-            </div>
-          )}
-        </div>
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col justify-between gap-8">
+        <RoomHeader
+          badge={civiliansWon ? "impostor found" : "impostor escaped"}
+          title={civiliansWon ? "Engineers Held the Line" : "Sabotage Succeeded"}
+          description={result ? `${formatWallet(result.impostor_wallet)} was the impostor` : "round finished"}
+          roomId={roomId}
+          accent={civiliansWon ? "var(--green)" : "#ff4444"}
+        />
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="border p-5" style={{ borderColor: "var(--border)" }}>
             <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
               Result
@@ -85,20 +79,30 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {!result && (
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="border px-4 py-3 text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
-            waiting for result
+            {!result
+              ? "waiting for result"
+              : civiliansWon
+                ? "The final code state passed inspection and the team removed the saboteur."
+                : "The final code state or the vote favored the impostor."}
           </div>
-        )}
 
-        <div className="flex gap-4">
-          <button
-            onClick={handleExit}
-            className="hover-lift border px-8 py-3 text-sm font-bold tracking-widest uppercase"
-            style={{ borderColor: "var(--green)", color: "var(--green)" }}
-          >
-            Return Home
-          </button>
+          <div className="flex flex-col gap-4 border p-5" style={{ borderColor: "var(--border)" }}>
+            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+              Next
+            </p>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
+              Reset the room, invite the next players, and start another round.
+            </p>
+            <button
+              onClick={handleExit}
+              className="hover-lift mt-auto border px-8 py-3 text-sm font-bold tracking-widest uppercase"
+              style={{ borderColor: "var(--green)", color: "var(--green)" }}
+            >
+              Return Home
+            </button>
+          </div>
         </div>
       </div>
     </main>

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import socket from "@/lib/socket";
+import RoomHeader from "@/components/RoomHeader";
 
 interface Player {
   color: string;
@@ -102,29 +103,26 @@ export default function LobbyPage() {
 
   return (
     <main className="min-h-screen px-6 py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col justify-between gap-8">
-        <div className="flex items-start justify-between gap-6 border-b pb-5" style={{ borderColor: "var(--border)" }}>
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--green)" }}>
-              SolSabotage
-            </span>
-            <h1 className="text-3xl font-bold">Waiting Room</h1>
-            <p className="text-sm" style={{ color: "var(--muted)" }}>
-              room {roomId} · bring in enough engineers before the round starts
-            </p>
-          </div>
-
-          <div className="min-w-56 border px-4 py-3 text-sm" style={{ borderColor: "var(--border)" }}>
-            <div className="flex items-center justify-between">
-              <span style={{ color: "var(--muted)" }}>players</span>
-              <span>{players.length}/4</span>
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col justify-between gap-8">
+        <RoomHeader
+          badge="solsabotage"
+          title="Waiting Room"
+          description="bring in enough engineers before the round starts"
+          roomId={roomId}
+          accent="var(--green)"
+          action={
+            <div className="min-w-56 border px-4 py-3 text-sm" style={{ borderColor: "var(--border)" }}>
+              <div className="flex items-center justify-between">
+                <span style={{ color: "var(--muted)" }}>players</span>
+                <span>{players.length}/4</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <span style={{ color: "var(--muted)" }}>host</span>
+                <span>{isHost ? "you" : "assigned"}</span>
+              </div>
             </div>
-            <div className="mt-2 flex items-center justify-between">
-              <span style={{ color: "var(--muted)" }}>host</span>
-              <span>{isHost ? "you" : "assigned"}</span>
-            </div>
-          </div>
-        </div>
+          }
+        />
 
         <div className="grid flex-1 gap-6 lg:grid-cols-[1.4fr_0.9fr]">
           <section className="flex flex-col gap-3">

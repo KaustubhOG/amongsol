@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import socket from "@/lib/socket";
+import RoomHeader from "@/components/RoomHeader";
 
 interface TestResult {
   name: string;
@@ -238,38 +239,34 @@ export default function GamePage() {
     <main className="min-h-screen">
       <div className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="flex min-h-screen flex-col border-r" style={{ borderColor: "var(--border)" }}>
-          <div className="flex items-center justify-between gap-4 border-b px-6 py-4" style={{ borderColor: "var(--border)" }}>
-            <div className="flex items-center gap-6">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--green)" }}>
-                  SolSabotage
+          <RoomHeader
+            badge="solsabotage"
+            title="Code Room"
+            description="repair the contract, then decide whether the room gets a meeting"
+            roomId={roomId}
+            accent="var(--green)"
+            action={
+              <div className="flex items-center gap-3">
+                <div className="border px-3 py-2 text-xs" style={{ borderColor: "var(--border)" }}>
+                  <span style={{ color: "var(--muted)" }}>role </span>
+                  <span style={{ color: role === "impostor" ? "#ff4444" : "var(--green)" }}>
+                    {role || "pending"}
+                  </span>
+                </div>
+                <span className="text-sm font-bold" style={{ color: timer <= 30 ? "#ff4444" : "var(--text)" }}>
+                  {timeStr}
                 </span>
-                <span className="text-sm" style={{ color: "var(--muted)" }}>
-                  room {roomId}
-                </span>
+                <button
+                  onClick={handleMeeting}
+                  disabled={locked || pendingAction === "meeting"}
+                  className="hover-lift border px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
+                  style={{ borderColor: "#ff4444", color: "#ff4444" }}
+                >
+                  {pendingAction === "meeting" ? "Calling..." : "Call Meeting"}
+                </button>
               </div>
-              <div className="border px-3 py-2 text-xs" style={{ borderColor: "var(--border)" }}>
-                <span style={{ color: "var(--muted)" }}>role </span>
-                <span style={{ color: role === "impostor" ? "#ff4444" : "var(--green)" }}>
-                  {role || "pending"}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-bold" style={{ color: timer <= 30 ? "#ff4444" : "var(--text)" }}>
-                {timeStr}
-              </span>
-              <button
-                onClick={handleMeeting}
-                disabled={locked || pendingAction === "meeting"}
-                className="hover-lift border px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
-                style={{ borderColor: "#ff4444", color: "#ff4444" }}
-              >
-                {pendingAction === "meeting" ? "Calling..." : "Call Meeting"}
-              </button>
-            </div>
-          </div>
+            }
+          />
 
           {locked && (
             <div className="border-b px-6 py-2 text-xs font-bold tracking-widest uppercase" style={{ borderColor: "var(--border)", backgroundColor: "#ff444422", color: "#ff4444" }}>
