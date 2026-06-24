@@ -139,7 +139,7 @@ export default function MeetingPage() {
         />
 
         <div className="grid gap-6 lg:grid-cols-[1.35fr_0.85fr]">
-          <section className="wood-panel flex flex-col gap-3 p-5">
+          <section className="space-panel flex flex-col gap-3 p-5">
             <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
               Edit History
             </p>
@@ -168,7 +168,7 @@ export default function MeetingPage() {
             ))}
           </section>
 
-          <aside className="wood-panel flex flex-col gap-4 p-5">
+          <aside className="space-panel flex flex-col gap-4 p-5">
             <div className="wood-panel-soft p-4">
               <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
                 Players

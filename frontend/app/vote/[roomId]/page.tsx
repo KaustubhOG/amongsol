@@ -93,40 +93,72 @@ export default function VotePage() {
       <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col gap-6">
         <RoomHeader
           badge="vote"
-          title="Who Sabotaged the Build?"
-          description="each wallet gets one vote"
+          title="Emergency Vote"
+          description="you can vote anyone. one vote per wallet."
           roomId={roomId}
           accent="#ff4444"
         />
 
-        <div className="wood-panel flex flex-col gap-3 p-5">
-          {players.map((player) => (
-            <div
-              key={player.wallet}
-              className="wood-panel-soft grid items-center gap-4 px-4 py-4 sm:grid-cols-[auto_1fr_auto_auto]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: player.color }} />
-                <span className="font-bold">{player.color}</span>
-              </div>
-              <span className="text-sm" style={{ color: "var(--muted)" }}>
-                {formatWallet(player.wallet)}
+        <div className="space-panel p-5">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="space-title text-xs font-bold" style={{ color: "#ff6666" }}>
+                voting board
               </span>
-              <span className="text-xs" style={{ color: "var(--muted)" }}>
-                {voteCounts[player.wallet] ?? 0} votes
-              </span>
-              <button
-                onClick={() => handleVote(player)}
-                disabled={votedWallet !== null}
-                className="hover-lift wood-button px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
-                style={{
-                  color: votedWallet === player.wallet ? "#ff4444" : "var(--text)",
-                }}
-              >
-                {votedWallet === player.wallet ? "voted" : "vote"}
-              </button>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                Pick any crewmate. The room tracks the tally live.
+              </p>
             </div>
-          ))}
+            <div className="wood-chip px-3 py-2 text-xs font-bold uppercase tracking-widest" style={{ color: "#ff6666" }}>
+              {votedWallet ? "vote locked" : "vote open"}
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {players.map((player) => {
+              const selected = votedWallet === player.wallet;
+
+              return (
+                <button
+                  key={player.wallet}
+                  onClick={() => handleVote(player)}
+                  disabled={votedWallet !== null}
+                  className="hover-lift wood-button flex flex-col gap-4 p-5 text-left disabled:opacity-70"
+                  style={{
+                    color: selected ? "#ff6666" : "var(--text)",
+                    outline: selected ? "2px solid rgba(255, 102, 102, 0.55)" : "none",
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="crewmate-pill h-12 w-12" style={{ backgroundColor: player.color }} />
+                      <div className="flex flex-col gap-1">
+                        <span className="text-lg font-bold capitalize">{player.color}</span>
+                        <span className="text-xs uppercase tracking-[0.3em]" style={{ color: "var(--muted)" }}>
+                          crewmate
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+                      {voteCounts[player.wallet] ?? 0} votes
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm" style={{ color: "var(--muted)" }}>
+                      {formatWallet(player.wallet)}
+                    </span>
+                    <span
+                      className="wood-chip px-3 py-2 text-xs font-bold uppercase tracking-widest"
+                      style={{ color: selected ? "#ff6666" : "var(--green)" }}
+                    >
+                      {selected ? "voted" : votedWallet ? "locked" : "vote"}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {error && (

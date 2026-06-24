@@ -126,7 +126,7 @@ export default function LobbyPage() {
         />
 
         <div className="grid flex-1 gap-6 lg:grid-cols-[1.4fr_0.9fr]">
-          <section className="flex flex-col gap-3">
+          <section className="space-panel flex flex-col gap-3 p-4">
             {players.length === 0 && (
               <div className="wood-panel-soft px-4 py-6 text-sm" style={{ color: "var(--muted)" }}>
                 waiting for server
@@ -152,7 +152,7 @@ export default function LobbyPage() {
             ))}
           </section>
 
-          <aside className="wood-panel flex flex-col gap-4 p-5">
+          <aside className="space-panel flex flex-col gap-4 p-5">
             <div className="flex flex-col gap-2">
               <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
                 Round Flow

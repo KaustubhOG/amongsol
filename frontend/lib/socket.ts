@@ -33,6 +33,23 @@ class SocketClient {
     window.localStorage.setItem("amongsol.lastMessages", JSON.stringify(this.lastMessages));
   }
 
+  private createWallet() {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+      return `crew_${crypto.randomUUID().slice(0, 8)}`;
+    }
+
+    return `crew_${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  ensureWallet() {
+    this.hydrateFromStorage();
+    if (!this.wallet) {
+      this.wallet = this.createWallet();
+      this.persist();
+    }
+    return this.wallet;
+  }
+
   connect(wallet: string) {
     this.hydrateFromStorage();
     if (this.ws?.readyState === WebSocket.OPEN) return;
@@ -78,7 +95,7 @@ class SocketClient {
       this.wallet = wallet;
       this.lastMessages = {};
       this.queue = [];
-       this.persist();
+      this.persist();
       this.ws = new WebSocket("ws://localhost:8080/ws");
 
       this.ws.onopen = () => {
@@ -149,9 +166,7 @@ class SocketClient {
     this.handlers = [];
     this.queue = [];
     this.lastMessages = {};
-    this.wallet = "";
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem("amongsol.wallet");
       window.localStorage.removeItem("amongsol.lastMessages");
     }
   }

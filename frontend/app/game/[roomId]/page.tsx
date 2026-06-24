@@ -239,7 +239,7 @@ export default function GamePage() {
   return (
     <main className="page-shell">
       <div className="page-frame grid min-h-[calc(100vh-3rem)] lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="wood-panel flex min-h-full flex-col overflow-hidden">
+        <section className="space-panel flex min-h-full flex-col overflow-hidden">
           <RoomHeader
             badge="solsabotage"
             title="Code Room"
@@ -271,13 +271,16 @@ export default function GamePage() {
                   ) : (
                     "Call Meeting"
                   )}
-                </button>
-              </div>
+                  </button>
+                </div>
             }
           />
 
           {locked && (
-            <div className="border-b px-6 py-2 text-xs font-bold tracking-widest uppercase" style={{ borderColor: "var(--border)", backgroundColor: "#ff444422", color: "#ff4444" }}>
+            <div
+              className="border-b px-6 py-2 text-xs font-bold tracking-widest uppercase"
+              style={{ borderColor: "var(--border)", backgroundColor: "#ff444422", color: "#ff4444" }}
+            >
               code locked
             </div>
           )}
@@ -380,11 +383,11 @@ export default function GamePage() {
           </div>
         </section>
 
-          <aside className="wood-panel flex min-h-full flex-col gap-6 overflow-hidden px-5 py-6">
-            <div className="flex flex-col gap-3">
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
-                Objective
-              </p>
+        <aside className="space-panel flex min-h-full flex-col gap-6 overflow-hidden px-5 py-6">
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+              Objective
+            </p>
             <div className="wood-panel-soft px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
               {role === "impostor"
                 ? "Keep suspicion off yourself and leave the code in a failing state."

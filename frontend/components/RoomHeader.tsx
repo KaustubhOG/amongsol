@@ -25,12 +25,12 @@ export default function RoomHeader({ badge, title, description, roomId, accent, 
   }
 
   return (
-    <div className="wood-panel flex flex-col gap-4 p-5 lg:flex-row lg:items-start lg:justify-between">
+    <div className="space-panel flex flex-col gap-5 p-5 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-bold tracking-widest uppercase" style={{ color: accent }}>
+        <span className="space-title text-xs font-bold" style={{ color: accent }}>
           {badge}
         </span>
-        <h1 className="text-3xl font-bold">{title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
         <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: "var(--muted)" }}>
           <span>{description}</span>
           <span className="wood-chip inline-flex items-center gap-2 px-2 py-1 text-xs">
