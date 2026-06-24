@@ -1,19 +1,22 @@
 use rand::Rng;
 
-use crate::game::session::{Challenge, ChallengeFunction};
+use crate::game::session::{Challenge, ChallengeFunction, GameMap};
 
-pub fn random_challenge() -> Challenge {
-    let all = all_challenges();
+pub fn random_challenge(map: &GameMap) -> Challenge {
+    let all = challenges_for_map(map);
     let idx = rand::thread_rng().gen_range(0..all.len());
     all.into_iter().nth(idx).unwrap()
 }
 
-fn all_challenges() -> Vec<Challenge> {
-    vec![
-        transfer_challenge(),
-        withdraw_challenge(),
-        initialize_challenge(),
-    ]
+fn challenges_for_map(map: &GameMap) -> Vec<Challenge> {
+    match map {
+        GameMap::Rust => vec![
+            transfer_challenge(),
+            withdraw_challenge(),
+            initialize_challenge(),
+        ],
+        GameMap::Anchor => vec![escrow_release_challenge()],
+    }
 }
 
 fn transfer_challenge() -> Challenge {
@@ -65,6 +68,20 @@ fn initialize_challenge() -> Challenge {
     }
     let adjusted = supply / (10u64.pow(decimals as u32));
     (adjusted, decimals, true)
+}"#
+            .to_string(),
+        }],
+    }
+}
+
+fn escrow_release_challenge() -> Challenge {
+    Challenge {
+        id: "escrow_release".to_string(),
+        functions: vec![ChallengeFunction {
+            name: "release_escrow".to_string(),
+            code: r#"pub fn release_escrow(escrow: &mut Escrow, signer: Pubkey) -> Result<(), &'static str> {
+    escrow.released = true;
+    Ok(())
 }"#
             .to_string(),
         }],

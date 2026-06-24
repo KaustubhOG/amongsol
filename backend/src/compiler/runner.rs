@@ -4,11 +4,20 @@ use tokio::process::Command;
 
 use crate::game::session::TestResult;
 
-pub async fn run_tests(challenge_id: &str, function_name: &str, new_code: &str) -> Vec<TestResult> {
+pub async fn run_tests(
+    map_id: &str,
+    challenge_id: &str,
+    function_name: &str,
+    new_code: &str,
+) -> Vec<TestResult> {
     let challenges_dir = Path::new("../challenges");
-    let source_dir = challenges_dir.join(challenge_id);
+    let source_dir = challenges_dir.join(map_id).join(challenge_id);
     let temp_id = uuid::Uuid::new_v4().to_string();
     let temp_dir = Path::new("/tmp").join(&temp_id);
+
+    if !source_dir.exists() {
+        return error_results();
+    }
 
     if let Err(_) = copy_dir(&source_dir, &temp_dir) {
         return error_results();

@@ -58,6 +58,8 @@ export default function LobbyPage() {
       return;
     }
 
+    let active = true;
+
     const unsub = socket.onMessage((msg) => {
       if (msg.type === "GameJoined") {
         const color = msg.your_color as string;
@@ -93,7 +95,16 @@ export default function LobbyPage() {
       }
     });
 
-    return unsub;
+    const wallet = socket.ensureWallet();
+    socket.joinGame(roomId, wallet).catch((err) => {
+      if (!active) return;
+      setError(err instanceof Error ? err.message : "failed to join room");
+    });
+
+    return () => {
+      active = false;
+      unsub();
+    };
   }, [initialState.state, roomId, router]);
 
   function handleStart() {
@@ -106,7 +117,7 @@ export default function LobbyPage() {
     <main className="page-shell">
       <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col justify-between gap-8">
         <RoomHeader
-          badge="solsabotage"
+          badge="amongsol"
           title="Waiting Room"
           description="bring in enough engineers before the round starts"
           roomId={roomId}

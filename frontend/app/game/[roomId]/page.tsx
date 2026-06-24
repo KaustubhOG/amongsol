@@ -241,7 +241,7 @@ export default function GamePage() {
       <div className="page-frame grid min-h-[calc(100vh-3rem)] lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="space-panel flex min-h-full flex-col overflow-hidden">
           <RoomHeader
-            badge="solsabotage"
+            badge="amongsol"
             title="Code Room"
             description="repair the contract, then decide whether the room gets a meeting"
             roomId={roomId}

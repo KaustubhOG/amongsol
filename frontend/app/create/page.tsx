@@ -1,38 +1,60 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import socket from "@/lib/socket";
+import { getBackendHttpUrl } from "@/lib/backend";
 
 const maps = [
   {
     id: "rust",
     label: "Rust",
-    detail: "Only language available right now. Fast, strict, and easy to sabotage.",
+    detail: "Pure Rust challenges with fast cargo test verification.",
     accent: "var(--green)",
+  },
+  {
+    id: "anchor",
+    label: "Anchor",
+    detail: "Solana-style program logic challenges with account-state checks.",
+    accent: "#ff6666",
   },
 ];
 
 export default function CreatePage() {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [loadingMap, setLoadingMap] = useState<string | null>(null);
 
   async function handleSelectMap(mapId: string) {
-    if (mapId !== "rust") return;
-
     const wallet = socket.ensureWallet();
+    setError(null);
+    setLoadingMap(mapId);
 
     try {
-      const res = await fetch("http://localhost:8080/game/create", {
+      const res = await fetch(getBackendHttpUrl("/game/create"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet }),
+        body: JSON.stringify({ wallet, map: mapId }),
       });
 
+      if (!res.ok) {
+        const raw = await res.text();
+        try {
+          const payload = JSON.parse(raw) as { error?: string };
+          setError(payload.error ?? "failed to create room");
+        } catch {
+          setError(raw || "failed to create room");
+        }
+        return;
+      }
+
       const data = await res.json();
-      await socket.connectAndWait(wallet);
-      socket.send({ type: "JoinGame", game_id: data.game_id, wallet });
+      await socket.joinGame(data.game_id, wallet);
       router.push(`/lobby/${data.game_id}`);
-    } catch {
-      router.push("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "failed to create room");
+    } finally {
+      setLoadingMap(null);
     }
   }
 
@@ -46,19 +68,21 @@ export default function CreatePage() {
             </span>
             <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">Choose a map</h1>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-6" style={{ color: "var(--muted)" }}>
-              The room starts after you choose the language. For now, Rust is the only available map.
+              The room starts after you choose the challenge environment.
             </p>
           </div>
 
-          <div className="flex justify-center">
+          <div className="grid gap-4 sm:grid-cols-2">
             {maps.map((map) => (
               <button
                 key={map.id}
+                type="button"
                 onClick={() => handleSelectMap(map.id)}
-                className="hover-lift space-panel w-full max-w-xl px-6 py-6 text-left sm:px-7 sm:py-7"
+                className="hover-lift space-panel min-h-56 px-6 py-6 text-left sm:px-7 sm:py-7"
                 style={{ color: "var(--text)" }}
+                disabled={loadingMap !== null}
               >
-                <div className="flex items-start justify-between gap-6">
+                <div className="flex h-full flex-col justify-between gap-6">
                   <div className="flex flex-col gap-2">
                     <span className="space-title text-xs font-bold" style={{ color: map.accent }}>
                       available map
@@ -70,15 +94,21 @@ export default function CreatePage() {
                   </div>
 
                   <span
-                    className="wood-chip shrink-0 px-3 py-2 text-xs font-bold uppercase tracking-widest"
+                    className="wood-chip w-fit px-3 py-2 text-xs font-bold uppercase tracking-widest"
                     style={{ color: map.accent }}
                   >
-                    select
+                    {loadingMap === map.id ? "creating" : "select"}
                   </span>
                 </div>
               </button>
             ))}
           </div>
+
+          {error ? (
+            <p className="mt-4 text-center text-sm" style={{ color: "#ff6666" }}>
+              {error}
+            </p>
+          ) : null}
         </section>
       </div>
     </main>

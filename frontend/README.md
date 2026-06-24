@@ -26,4 +26,5 @@ http://localhost:3000
 
 - The frontend expects the backend to be available at `http://localhost:8080`.
 - Join/create flow, lobby, code room, meeting, vote, and result screens are all part of this app.
+- Create flow sends the selected map, currently `rust` or `anchor`, to the backend.
 - Wallet identity is handled locally in the browser.

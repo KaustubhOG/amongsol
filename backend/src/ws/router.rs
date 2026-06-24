@@ -263,7 +263,7 @@ async fn handle_start_game(conn_id: &str, state: &AppState) {
             .as_secs();
         session.started_at = Some(now);
 
-        let challenge = random_challenge();
+        let challenge = random_challenge(&session.map);
         let fns: Vec<FunctionInfo> = challenge
             .functions
             .iter()
@@ -342,7 +342,7 @@ async fn handle_run_tests(conn_id: &str, state: &AppState) {
         None => return,
     };
 
-    let (cursor_color, challenge_id, function_name, current_code) = {
+    let (cursor_color, map_id, challenge_id, function_name, current_code) = {
         let session = match state.game_manager.sessions.get(&game_id) {
             Some(s) => s,
             None => return,
@@ -369,11 +369,12 @@ async fn handle_run_tests(conn_id: &str, state: &AppState) {
             .cloned()
             .unwrap_or_default();
 
-        (color, cid, fname, code)
+        (color, session.map.as_str().to_string(), cid, fname, code)
     };
 
     let results =
-        crate::compiler::runner::run_tests(&challenge_id, &function_name, &current_code).await;
+        crate::compiler::runner::run_tests(&map_id, &challenge_id, &function_name, &current_code)
+            .await;
 
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

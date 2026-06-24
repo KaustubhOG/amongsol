@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SolSabotage",
+  title: "AmongSol",
   description: "Fix code. Find the traitor. Win SOL.",
 };
 

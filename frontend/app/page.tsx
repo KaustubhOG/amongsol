@@ -11,7 +11,7 @@ export default function Home() {
         <section className="w-full max-w-4xl px-4 py-8 sm:px-6">
           <div className="mb-8 text-center">
             <span className="space-title text-xs font-bold" style={{ color: "var(--green)" }}>
-              solsabotage
+              amongsol
             </span>
             <h1 className="mt-2 text-5xl font-bold tracking-tight sm:text-7xl">Code Room</h1>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-6" style={{ color: "var(--muted)" }}>

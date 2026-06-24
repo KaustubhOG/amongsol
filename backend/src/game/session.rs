@@ -3,8 +3,36 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 pub type PlayerId = String;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GameMap {
+    Rust,
+    Anchor,
+}
+
+impl GameMap {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            GameMap::Rust => "rust",
+            GameMap::Anchor => "anchor",
+        }
+    }
+}
+
+impl FromStr for GameMap {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "rust" => Ok(GameMap::Rust),
+            "anchor" => Ok(GameMap::Anchor),
+            _ => Err(()),
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GameState {
@@ -63,6 +91,7 @@ pub const COLORS: [&str; 4] = ["green", "red", "blue", "yellow"];
 #[derive(Debug)]
 pub struct GameSession {
     pub id: String,
+    pub map: GameMap,
     pub players: Vec<Player>,
     pub impostor: Option<PlayerId>,
     pub challenge: Option<Challenge>,
@@ -79,9 +108,10 @@ pub struct GameSession {
 }
 
 impl GameSession {
-    pub fn new(id: String) -> Self {
+    pub fn new(id: String, map: GameMap) -> Self {
         Self {
             id,
+            map,
             players: Vec::new(),
             impostor: None,
             challenge: None,

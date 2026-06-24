@@ -1,19 +1,20 @@
 # AmongSol
 
 AmongSol is a multiplayer social-deduction coding game inspired by Among Us.
-Players join a room, edit Rust code together, run tests, call meetings, and vote out the impostor before the round ends.
+Players join a room, choose a challenge map, edit code together, run tests, call meetings, and vote out the impostor before the round ends.
 
 ## What The Project Contains
 
 - `frontend/` - Next.js UI for the home screen, lobby, code room, meeting flow, voting, and results.
 - `backend/` - Axum + WebSocket game server that manages rooms, players, rounds, voting, and game state.
-- `challenges/transfer/` - Rust challenge crate used by the code room gameplay.
+- `challenges/rust/` - Rust map challenge crates.
+- `challenges/anchor/` - Anchor/Solana map challenge crates.
 
 ## Core Flow
 
 1. Open the home screen.
 2. Create a room or join an existing room code.
-3. If creating, choose the map. Right now the only available map is Rust.
+3. If creating, choose a map: Rust or Anchor.
 4. Enter the lobby and wait for players.
 5. Start the round.
 6. Edit code in the code room, run tests, and call a meeting when needed.
@@ -65,7 +66,12 @@ amongsol/
     lib/
     package.json
   challenges/
-    transfer/
+    rust/
+      transfer/
+      withdraw/
+      initialize/
+    anchor/
+      escrow_release/
 ```
 
 ## Running The Backend
@@ -87,6 +93,20 @@ Backend routes used by the frontend:
 - `POST /game/create`
 - `POST /game/join`
 - `GET /ws`
+
+`POST /game/create` accepts:
+
+```json
+{
+  "wallet": "crew_wallet_or_local_identity",
+  "map": "rust"
+}
+```
+
+Supported map values:
+
+- `rust`
+- `anchor`
 
 ## Running The Frontend
 
@@ -127,14 +147,33 @@ Inside `frontend/`:
 - The backend creates the `game_results` table on startup if it does not exist.
 - Game rooms are managed in memory for the active server process.
 - WebSocket state drives the lobby, game, meeting, vote, and result views.
+- Each room stores the selected map, and test execution resolves challenges from `challenges/<map>/<challenge>`.
 
 ## Game UI Notes
 
 - Home screen: choose between create and join.
-- Create flow: choose the Rust map.
+- Create flow: choose Rust or Anchor.
 - Join flow: enter the room code only.
 - Voting screen: any player can vote any player.
 - Result screen: shows only the winner state and room code.
+
+## Challenge Layout
+
+Every map owns its challenge folders.
+
+Rust challenges live in:
+
+```text
+challenges/rust/<challenge_id>/
+```
+
+Anchor challenges live in:
+
+```text
+challenges/anchor/<challenge_id>/
+```
+
+The backend passes both `map_id` and `challenge_id` into the test runner. This keeps Rust-specific work inside the Rust map folder and Anchor-specific work inside the Anchor map folder.
 
 ## Troubleshooting
 

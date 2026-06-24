@@ -1,12 +1,15 @@
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 use crate::errors::AppError;
+use crate::game::session::GameMap;
 use crate::AppState;
 
 #[derive(Deserialize)]
 pub struct CreateGameRequest {
     pub wallet: String,
+    pub map: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -33,7 +36,11 @@ pub async fn create_game_handler(
     if body.wallet.trim().is_empty() {
         return Err(AppError::Internal("wallet is required".to_string()));
     }
-    let game_id = state.game_manager.create_game();
+    let map = match body.map {
+        Some(value) => GameMap::from_str(&value).map_err(|_| AppError::UnsupportedMap)?,
+        None => GameMap::Rust,
+    };
+    let game_id = state.game_manager.create_game(map);
     Ok(Json(CreateGameResponse { game_id }))
 }
 

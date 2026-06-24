@@ -72,7 +72,7 @@ async fn run_timer(
         }
 
         if remaining == 0 {
-            let (challenge_id, function_name, current_code) = {
+            let (map_id, challenge_id, function_name, current_code) = {
                 let session = match game_manager.sessions.get(&game_id) {
                     Some(s) => s,
                     None => return,
@@ -95,10 +95,15 @@ async fn run_timer(
                     .cloned()
                     .unwrap_or_default();
 
-                (challenge_id, function_name, current_code)
+                (
+                    session.map.as_str().to_string(),
+                    challenge_id,
+                    function_name,
+                    current_code,
+                )
             };
 
-            let results = run_tests(&challenge_id, &function_name, &current_code).await;
+            let results = run_tests(&map_id, &challenge_id, &function_name, &current_code).await;
             let winner = if results.iter().all(|result| result.passed) {
                 WinnerType::Civilians
             } else {

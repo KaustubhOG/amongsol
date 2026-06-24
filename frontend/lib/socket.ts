@@ -1,4 +1,9 @@
+import { getBackendWsUrl } from "./backend";
+
 type MessageHandler = (msg: Record<string, unknown>) => void;
+
+const walletKey = "amongsol.wallet";
+const lastMessagesKey = "amongsol.lastMessages";
 
 class SocketClient {
   private ws: WebSocket | null = null;
@@ -12,12 +17,15 @@ class SocketClient {
     if (this.hydrated || typeof window === "undefined") return;
     this.hydrated = true;
 
-    const wallet = window.localStorage.getItem("amongsol.wallet");
+    window.localStorage.removeItem(walletKey);
+    window.localStorage.removeItem(lastMessagesKey);
+
+    const wallet = window.sessionStorage.getItem(walletKey);
     if (wallet) {
       this.wallet = wallet;
     }
 
-    const rawMessages = window.localStorage.getItem("amongsol.lastMessages");
+    const rawMessages = window.sessionStorage.getItem(lastMessagesKey);
     if (rawMessages) {
       try {
         this.lastMessages = JSON.parse(rawMessages) as Record<string, Record<string, unknown>>;
@@ -29,8 +37,10 @@ class SocketClient {
 
   private persist() {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem("amongsol.wallet", this.wallet);
-    window.localStorage.setItem("amongsol.lastMessages", JSON.stringify(this.lastMessages));
+    window.sessionStorage.setItem(walletKey, this.wallet);
+    window.sessionStorage.setItem(lastMessagesKey, JSON.stringify(this.lastMessages));
+    window.localStorage.removeItem(walletKey);
+    window.localStorage.removeItem(lastMessagesKey);
   }
 
   private createWallet() {
@@ -57,7 +67,7 @@ class SocketClient {
     this.lastMessages = {};
     this.queue = [];
     this.persist();
-    this.ws = new WebSocket("ws://localhost:8080/ws");
+    this.ws = new WebSocket(getBackendWsUrl("/ws"));
 
     this.ws.onopen = () => {
       this.queue.forEach((msg) => this.ws!.send(JSON.stringify(msg)));
@@ -96,7 +106,7 @@ class SocketClient {
       this.lastMessages = {};
       this.queue = [];
       this.persist();
-      this.ws = new WebSocket("ws://localhost:8080/ws");
+      this.ws = new WebSocket(getBackendWsUrl("/ws"));
 
       this.ws.onopen = () => {
         this.queue.forEach((msg) => this.ws!.send(JSON.stringify(msg)));
@@ -129,6 +139,33 @@ class SocketClient {
     } else {
       this.queue.push(msg);
     }
+  }
+
+  async joinGame(gameId: string, wallet: string) {
+    await this.connectAndWait(wallet);
+
+    return new Promise<Record<string, unknown>>((resolve, reject) => {
+      const timeout = window.setTimeout(() => {
+        unsub();
+        reject(new Error("server did not confirm room join"));
+      }, 5000);
+
+      const unsub = this.onMessage((msg) => {
+        if (msg.type === "GameJoined" && msg.game_id === gameId) {
+          window.clearTimeout(timeout);
+          unsub();
+          resolve(msg);
+        }
+
+        if (msg.type === "Error") {
+          window.clearTimeout(timeout);
+          unsub();
+          reject(new Error((msg.message as string | undefined) ?? "failed to join room"));
+        }
+      });
+
+      this.send({ type: "JoinGame", game_id: gameId, wallet });
+    });
   }
 
   onMessage(handler: MessageHandler) {
@@ -167,7 +204,9 @@ class SocketClient {
     this.queue = [];
     this.lastMessages = {};
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem("amongsol.lastMessages");
+      window.sessionStorage.removeItem(lastMessagesKey);
+      window.localStorage.removeItem(walletKey);
+      window.localStorage.removeItem(lastMessagesKey);
     }
   }
 }

@@ -1,0 +1,8 @@
+[package]
+name = "initialize-challenge"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "initialize_challenge"
+crate-type = ["lib"]

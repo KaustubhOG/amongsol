@@ -23,3 +23,13 @@ fn test_supply_unchanged() {
     transfer(&mut from, &mut to, 100);
     assert_eq!(from + to, 1000);
 }
+
+#[test]
+fn test_rejects_insufficient_balance() {
+    let mut from = 50u64;
+    let mut to = 0u64;
+    let result = transfer(&mut from, &mut to, 100);
+    assert!(!result);
+    assert_eq!(from, 50);
+    assert_eq!(to, 0);
+}

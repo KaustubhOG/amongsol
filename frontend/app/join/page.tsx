@@ -22,11 +22,10 @@ export default function JoinPage() {
     setError("");
 
     try {
-      await socket.connectAndWait(wallet);
-      socket.send({ type: "JoinGame", game_id: code, wallet });
+      await socket.joinGame(code, wallet);
       router.push(`/lobby/${code}`);
-    } catch {
-      setError("failed to join room");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "failed to join room");
       setLoading(false);
     }
   }

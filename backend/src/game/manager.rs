@@ -2,7 +2,7 @@ use dashmap::DashMap;
 use uuid::Uuid;
 
 use crate::errors::AppError;
-use crate::game::session::{GameSession, Player};
+use crate::game::session::{GameMap, GameSession, Player};
 
 pub struct GameManager {
     pub sessions: DashMap<String, GameSession>,
@@ -17,7 +17,7 @@ impl GameManager {
         }
     }
 
-    pub fn create_game(&self) -> String {
+    pub fn create_game(&self, map: GameMap) -> String {
         let id = Uuid::new_v4()
             .to_string()
             .split('-')
@@ -25,7 +25,7 @@ impl GameManager {
             .unwrap_or("UNKNOWN")
             .to_uppercase();
         self.sessions
-            .insert(id.clone(), GameSession::new(id.clone()));
+            .insert(id.clone(), GameSession::new(id.clone(), map));
         id
     }
 

@@ -20,6 +20,8 @@ pub enum AppError {
     InvalidState,
     #[error("player not found")]
     PlayerNotFound,
+    #[error("unsupported map")]
+    UnsupportedMap,
     #[error("{0}")]
     Internal(String),
 }
@@ -33,6 +35,7 @@ impl IntoResponse for AppError {
             AppError::NotAuthorized => StatusCode::UNAUTHORIZED,
             AppError::InvalidState => StatusCode::BAD_REQUEST,
             AppError::PlayerNotFound => StatusCode::NOT_FOUND,
+            AppError::UnsupportedMap => StatusCode::BAD_REQUEST,
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (status, Json(json!({ "error": self.to_string() }))).into_response()

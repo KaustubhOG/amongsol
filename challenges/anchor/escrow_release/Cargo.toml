@@ -1,0 +1,8 @@
+[package]
+name = "escrow-release-challenge"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "escrow_release_challenge"
+crate-type = ["lib"]
