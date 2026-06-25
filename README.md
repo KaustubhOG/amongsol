@@ -43,23 +43,28 @@ The game is built on a Rust/Axum WebSocket backend, a Next.js frontend with a Mo
 
 **Home Screen**
 
-![Home Screen](Screenshots/Screenshot%20from%202026-06-25%2005-33-44.png)
+<img width="1916" height="967" alt="Screenshot from 2026-06-25 05-33-24" src="https://github.com/user-attachments/assets/2d0d0fc4-5f7d-4756-bd1f-6737a274a58d" />
+
 
 **Create Room**
 
-![Create Room](Screenshots/Screenshot%20from%202026-06-25%2005-33-56.png)
+<img width="1916" height="967" alt="Screenshot from 2026-06-25 05-34-23" src="https://github.com/user-attachments/assets/82a8b145-8c98-4399-b44c-68434a8bb125" />
+
 
 **Lobby**
 
-![Lobby](Screenshots/Screenshot%20from%202026-06-25%2005-34-23.png)
+<img width="1916" height="967" alt="Screenshot from 2026-06-25 05-34-51" src="https://github.com/user-attachments/assets/dc48ead1-8963-411b-81ba-6492bbebb22f" />
+
 
 **Game View**
 
-![Game View](Screenshots/Screenshot%20from%202026-06-25%2005-34-51.png)
+<img width="1920" height="1080" alt="Screenshot from 2026-06-24 09-30-30" src="https://github.com/user-attachments/assets/6320c3dd-35c8-4427-9618-39d80b063784" />
+
 
 **Meeting and Vote**
 
-![Meeting Vote](Screenshots/Screenshot%20from%202026-06-25%2005-35-00.png)
+<img width="1920" height="1080" alt="Screenshot from 2026-06-24 07-18-18" src="https://github.com/user-attachments/assets/516b0e11-e4a9-4fdc-ae8e-8c4e7dc1e75d" />
+
 
 ---
 
