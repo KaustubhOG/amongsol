@@ -4,11 +4,13 @@ AmongSol is a multiplayer social-deduction coding game inspired by Among Us. Pla
 
 ## Screenshots
 
-![Home Screen](Screenshots/Screenshot%20from%202026-06-25%2005-33-44.png)
-![Create Room](Screenshots/Screenshot%20from%202026-06-25%2005-33-56.png)
-![Lobby](Screenshots/Screenshot%20from%202026-06-25%2005-34-23.png)
-![Game View](Screenshots/Screenshot%20from%202026-06-25%2005-34-51.png)
-![Meeting Vote](Screenshots/Screenshot%20from%202026-06-25%2005-35-00.png)
+<img width="1916" height="967" alt="Screenshot from 2026-06-25 05-33-24" src="https://github.com/user-attachments/assets/69c34199-761c-4619-a38b-71dbe1688edc" />
+<img width="1916" height="967" alt="Screenshot from 2026-06-25 05-26-34" src="https://github.com/user-attachments/assets/d47192e7-6d9f-417c-b811-9db2216c5416" />
+<img width="1916" height="967" alt="Screenshot from 2026-06-25 05-34-23" src="https://github.com/user-attachments/assets/97a145e0-5612-43cc-8750-26c0697f5c16" /><img width="1916" height="967" alt="Screenshot from 2026-06-25 05-34-51" src="https://github.com/user-attachments/assets/c6679d7d-979e-4296-9662-c821cfd49175" />
+<img width="1920" height="1080" alt="Screenshot from 2026-06-24 07-59-55" src="https://github.com/user-attachments/assets/029b1761-85b5-4427-bfb3-fef012e8ecb1" />
+
+
+
 
 ## Solana Integration
 
