@@ -3,7 +3,10 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import socket from "@/lib/socket";
+import sound from "@/lib/sound";
 import RoomHeader from "@/components/RoomHeader";
+import Crewmate2D from "@/components/Crewmate2D";
+import { crewColor } from "@/lib/colors";
 
 interface TestResult {
   name: string;
@@ -45,11 +48,7 @@ function getCursorPosition(source: string, selectionStart: number): CursorPositi
   const lines = prefix.split("\n");
   const line = lines.length;
   const column = (lines[lines.length - 1]?.length ?? 0) + 1;
-  return {
-    line,
-    column,
-    label: `${line}:${column}`,
-  };
+  return { line, column, label: `${line}:${column}` };
 }
 
 function getLineNumbers(source: string) {
@@ -72,8 +71,7 @@ function getInitialGameState() {
     role: (socket.getLastMessage("RoleAssigned")?.role as string | undefined) ?? "",
     functions,
     code,
-    testResults:
-      (socket.getLastMessage("TestResults")?.results as TestResult[] | undefined) ?? [],
+    testResults: (socket.getLastMessage("TestResults")?.results as TestResult[] | undefined) ?? [],
     timer: (socket.getLastMessage("TimerTick")?.remaining as number | undefined) ?? 180,
     locked: Boolean(socket.getLastMessage("CodeLocked")),
   };
@@ -103,12 +101,10 @@ export default function GamePage() {
       router.replace(`/meeting/${roomId}`);
       return;
     }
-
     if (initialState.roomState === "voting") {
       router.replace(`/vote/${roomId}`);
       return;
     }
-
     if (initialState.roomState === "ended") {
       router.replace(`/results/${roomId}`);
       return;
@@ -144,8 +140,12 @@ export default function GamePage() {
       }
 
       if (msg.type === "TestResults") {
-        setTestResults(msg.results as TestResult[]);
+        const results = msg.results as TestResult[];
+        setTestResults(results);
         setPendingAction((current) => (current === "tests" ? null : current));
+        if (results.length > 0) {
+          sound.play(results.every((r) => r.passed) ? "success" : "error");
+        }
       }
 
       if (msg.type === "PlayerEditing") {
@@ -155,12 +155,7 @@ export default function GamePage() {
           const player = players.find((entry) => entry.color === color);
           return {
             ...prev,
-            [color]: {
-              color,
-              wallet: player?.wallet ?? "",
-              status: "editing",
-              functionName,
-            },
+            [color]: { color, wallet: player?.wallet ?? "", status: "editing", functionName },
           };
         });
       }
@@ -171,10 +166,12 @@ export default function GamePage() {
 
       if (msg.type === "CodeLocked") {
         setLocked(true);
+        sound.play("alert");
       }
 
       if (msg.type === "MeetingCalled") {
         setPendingAction((current) => (current === "meeting" ? null : current));
+        sound.play("alert");
         router.push(`/meeting/${roomId}`);
       }
 
@@ -211,10 +208,7 @@ export default function GamePage() {
     if (locked) return;
     setCode((prev) => ({ ...prev, [fnName]: newCode }));
     if (typeof selectionStart === "number") {
-      setCursorByFunction((prev) => ({
-        ...prev,
-        [fnName]: getCursorPosition(newCode, selectionStart),
-      }));
+      setCursorByFunction((prev) => ({ ...prev, [fnName]: getCursorPosition(newCode, selectionStart) }));
     }
     socket.send({ type: "EditCode", function_name: fnName, code: newCode });
   }
@@ -222,12 +216,14 @@ export default function GamePage() {
   function handleRunTests() {
     if (locked || pendingAction) return;
     setPendingAction("tests");
+    sound.play("test");
     socket.send({ type: "RunTests" });
   }
 
   function handleMeeting() {
     if (locked || pendingAction) return;
     setPendingAction("meeting");
+    sound.play("alert");
     socket.send({ type: "CallMeeting" });
   }
 
@@ -235,73 +231,73 @@ export default function GamePage() {
   const seconds = timer % 60;
   const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
   const myPlayer = players.find((player) => player.color === myColor);
+  const isImpostor = role === "impostor";
+  const danger = timer <= 30;
+  const allPassing = testResults.length > 0 && testResults.every((r) => r.passed);
 
   return (
     <main className="page-shell">
-      <div className="page-frame grid min-h-[calc(100vh-3rem)] lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="space-panel flex min-h-full flex-col overflow-hidden">
+      <div className="page-frame grid min-h-[calc(100vh-3rem)] gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="panel flex min-h-full flex-col overflow-hidden">
           <RoomHeader
-            badge="amongsol"
-            title="Code Room"
-            description="repair the contract, then decide whether the room gets a meeting"
+            badge="code room"
+            title="Repair Bay"
+            description="fix the contract, run tests, call a meeting if the code smells wrong"
             roomId={roomId}
-            accent="var(--green)"
+            accent={isImpostor ? "var(--impostor)" : "var(--accent)"}
             action={
               <div className="flex items-center gap-3">
-                <div className="border px-3 py-2 text-xs" style={{ borderColor: "var(--border)" }}>
-                  <span style={{ color: "var(--muted)" }}>role </span>
-                  <span style={{ color: role === "impostor" ? "#ff4444" : "var(--green)" }}>
-                    {role || "pending"}
-                  </span>
+                <div className="chip" style={{ color: isImpostor ? "var(--impostor)" : "var(--success)" }}>
+                  role <span className="font-bold">{role || "pending"}</span>
                 </div>
-                <span className="text-sm font-bold" style={{ color: timer <= 30 ? "#ff4444" : "var(--text)" }}>
+                <div
+                  className="panel-soft px-4 py-2 font-mono text-lg font-bold"
+                  style={{ color: danger ? "var(--danger)" : "var(--text)", minWidth: "76px", textAlign: "center" }}
+                >
                   {timeStr}
-                </span>
+                </div>
                 <button
                   onClick={handleMeeting}
+                  onMouseEnter={() => sound.play("hover")}
                   disabled={locked || pendingAction === "meeting"}
-                  className="hover-lift wood-button px-4 py-2 text-xs font-bold tracking-widest uppercase disabled:opacity-50"
-                  style={{ color: "#ff4444" }}
+                  className="btn btn-danger"
                 >
                   {pendingAction === "meeting" ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
-                      calling...
-                    </span>
+                    <span className="inline-flex items-center gap-2"><span className="spin" /> calling</span>
                   ) : (
-                    "Call Meeting"
+                    "Emergency"
                   )}
-                  </button>
-                </div>
+                </button>
+              </div>
             }
           />
 
           {locked && (
             <div
-              className="border-b px-6 py-2 text-xs font-bold tracking-widest uppercase"
-              style={{ borderColor: "var(--border)", backgroundColor: "#ff444422", color: "#ff4444" }}
+              className="alarm-flash mt-4 rounded-xl px-5 py-2 text-center text-xs font-bold uppercase"
+              style={{ background: "rgba(255,77,109,0.14)", color: "var(--danger)", letterSpacing: "0.18em" }}
             >
               code locked
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className="flex-1 overflow-y-auto p-5">
             <div className="mb-5 grid gap-3 sm:grid-cols-3">
-              <div className="wood-panel-soft px-4 py-3 text-xs">
+              <div className="panel-soft px-4 py-3 text-xs">
                 <div style={{ color: "var(--muted)" }}>phase</div>
-                <div className="mt-1 font-bold uppercase tracking-widest" style={{ color: locked ? "#ff4444" : "var(--green)" }}>
-                  {locked ? "code locked" : pendingAction ? "working" : "editing"}
+                <div className="mt-1 font-bold uppercase" style={{ color: locked ? "var(--danger)" : "var(--success)", letterSpacing: "0.12em" }}>
+                  {locked ? "locked" : pendingAction ? "working" : "editing"}
                 </div>
               </div>
-              <div className="wood-panel-soft px-4 py-3 text-xs">
-                <div style={{ color: "var(--muted)" }}>cursor map</div>
-                <div className="mt-1 font-bold uppercase tracking-widest" style={{ color: "var(--text)" }}>
-                  {Object.keys(cursorByFunction).length ? `${Object.keys(cursorByFunction).length} active` : "tracking"}
+              <div className="panel-soft px-4 py-3 text-xs">
+                <div style={{ color: "var(--muted)" }}>tests</div>
+                <div className="mt-1 font-bold uppercase" style={{ color: allPassing ? "var(--success)" : "var(--warn)", letterSpacing: "0.12em" }}>
+                  {testResults.length === 0 ? "no run" : allPassing ? "passing" : "failing"}
                 </div>
               </div>
-              <div className="wood-panel-soft px-4 py-3 text-xs">
+              <div className="panel-soft px-4 py-3 text-xs">
                 <div style={{ color: "var(--muted)" }}>your role</div>
-                <div className="mt-1 font-bold uppercase tracking-widest" style={{ color: role === "impostor" ? "#ff4444" : "var(--green)" }}>
+                <div className="mt-1 font-bold uppercase" style={{ color: isImpostor ? "var(--impostor)" : "var(--success)", letterSpacing: "0.12em" }}>
                   {role || "pending"}
                 </div>
               </div>
@@ -309,20 +305,17 @@ export default function GamePage() {
 
             <div className="flex flex-col gap-5">
               {functions.map((fn) => {
-                const hasRemoteCursor = Object.values(playerStatuses).some(
-                  (entry) => entry.functionName === fn.name
-                );
-
+                const hasRemoteCursor = Object.values(playerStatuses).some((entry) => entry.functionName === fn.name);
                 return (
                   <div key={fn.name} className="flex flex-col gap-2">
                     <div className="flex items-center justify-between gap-4">
-                      <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+                      <p className="font-mono text-xs font-bold uppercase" style={{ color: "var(--accent)", letterSpacing: "0.12em" }}>
                         {fn.name}
                       </p>
                       <div className="flex items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
-                        <span>{myPlayer ? formatWallet(myPlayer.wallet) : "connected"}</span>
+                        <span className="font-mono">{myPlayer ? formatWallet(myPlayer.wallet) : "connected"}</span>
                         {cursorByFunction[fn.name] && (
-                          <span className="cursor-badge border px-2 py-1 uppercase tracking-widest" style={{ borderColor: "var(--green)", color: "var(--green)" }}>
+                          <span className="chip font-mono text-[10px]" style={{ color: "var(--success)" }}>
                             {cursorByFunction[fn.name].label}
                           </span>
                         )}
@@ -330,16 +323,14 @@ export default function GamePage() {
                     </div>
 
                     <div
-                      className="editor-shell border"
-                      style={{ borderColor: hasRemoteCursor ? "var(--green)" : "var(--border)" }}
+                      className="editor-shell"
+                      style={{ borderColor: hasRemoteCursor ? "var(--accent)" : "var(--panel-line)" }}
                     >
                       <div className="grid grid-cols-[52px_minmax(0,1fr)]">
                         <div className="editor-gutter select-none px-3 py-4 text-right text-xs leading-6">
-                          {getLineNumbers(code[fn.name] ?? "")
-                            .slice(0, 120)
-                            .map((lineNumber) => (
-                              <div key={lineNumber}>{lineNumber}</div>
-                            ))}
+                          {getLineNumbers(code[fn.name] ?? "").slice(0, 120).map((lineNumber) => (
+                            <div key={lineNumber}>{lineNumber}</div>
+                          ))}
                         </div>
                         <div className="relative">
                           <textarea
@@ -354,10 +345,8 @@ export default function GamePage() {
                               handleCodeChange(fn.name, event.currentTarget.value, event.currentTarget.selectionStart ?? undefined)
                             }
                             disabled={locked}
-                            className="cursor-text min-h-[320px] w-full resize-none bg-transparent p-4 text-sm outline-none"
-                            style={{
-                              color: locked ? "var(--muted)" : "var(--text)",
-                            }}
+                            className="code-area cursor-text min-h-[300px] w-full resize-none bg-transparent p-4 text-sm leading-6 outline-none"
+                            style={{ color: locked ? "var(--muted)" : "var(--text)" }}
                             spellCheck={false}
                           />
                           <div className="pointer-events-none absolute right-3 top-3 flex flex-wrap justify-end gap-2">
@@ -366,10 +355,10 @@ export default function GamePage() {
                               .map((entry) => (
                                 <span
                                   key={`${entry.color}-${fn.name}`}
-                                  className="cursor-badge border px-2 py-1 text-[10px] uppercase tracking-widest"
-                                  style={{ borderColor: entry.color, color: entry.color }}
+                                  className="chip text-[10px] uppercase"
+                                  style={{ color: crewColor(entry.color).base, borderColor: crewColor(entry.color).base }}
                                 >
-                                  {entry.color} cursor
+                                  {crewColor(entry.color).label} cursor
                                 </span>
                               ))}
                           </div>
@@ -383,32 +372,28 @@ export default function GamePage() {
           </div>
         </section>
 
-        <aside className="space-panel flex min-h-full flex-col gap-6 overflow-hidden px-5 py-6">
+        <aside className="panel flex min-h-full flex-col gap-6 overflow-hidden p-6">
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
-              Objective
-            </p>
-            <div className="wood-panel-soft px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
-              {role === "impostor"
+            <p className="eyebrow" style={{ color: "var(--muted)" }}>objective</p>
+            <div className="panel-soft px-4 py-3 text-sm leading-6" style={{ color: "var(--muted)" }}>
+              {isImpostor
                 ? "Keep suspicion off yourself and leave the code in a failing state."
                 : "Repair the code, verify it with tests, and identify the saboteur."}
             </div>
           </div>
 
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
-              Test Results
-            </p>
+            <p className="eyebrow" style={{ color: "var(--muted)" }}>test results</p>
             <div className="flex flex-col gap-2">
               {testResults.length === 0 && (
-                <div className="wood-panel-soft px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
+                <div className="panel-soft px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
                   no run yet
                 </div>
               )}
               {testResults.map((result) => (
-                <div key={result.name} className="wood-panel-soft flex items-center justify-between px-4 py-3 text-sm">
-                  <span>{result.name}</span>
-                  <span style={{ color: result.passed ? "var(--green)" : "#ff4444" }}>
+                <div key={result.name} className="panel-soft flex items-center justify-between px-4 py-3 text-sm">
+                  <span className="font-mono text-xs">{result.name}</span>
+                  <span style={{ color: result.passed ? "var(--success)" : "var(--danger)" }}>
                     {result.passed ? "pass" : "fail"}
                   </span>
                 </div>
@@ -417,53 +402,45 @@ export default function GamePage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
-              Players
-            </p>
+            <p className="eyebrow" style={{ color: "var(--muted)" }}>crew</p>
             <div className="flex flex-col gap-2">
               {visiblePlayers.map((player) => (
-                <div key={player.wallet} className="wood-panel-soft px-4 py-3 text-sm">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: player.color }} />
-                      <span className="font-bold">{player.color}</span>
+                <div key={player.wallet} className="panel-soft flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                  <div className="flex items-center gap-3">
+                    <Crewmate2D color={player.color} size={28} />
+                    <div className="flex flex-col">
+                      <span className="font-bold" style={{ color: crewColor(player.color).base }}>
+                        {crewColor(player.color).label}
+                      </span>
+                      <span className="text-xs" style={{ color: "var(--muted)" }}>
+                        {player.color === myColor ? "you" : formatWallet(player.wallet)}
+                      </span>
                     </div>
-                    <span style={{ color: player.status === "editing" ? "var(--green)" : "var(--muted)" }}>
-                      {player.status}
-                    </span>
                   </div>
-                  <div className="mt-2 text-xs" style={{ color: "var(--muted)" }}>
-                    {player.color === myColor ? "you" : formatWallet(player.wallet)}
-                  </div>
-                  {player.functionName && (
-                    <div className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
-                      {player.functionName}
-                    </div>
-                  )}
+                  <span style={{ color: player.status === "editing" ? "var(--success)" : "var(--muted)" }}>
+                    {player.status}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
 
           {error && (
-            <div className="wood-panel-soft px-4 py-3 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+            <div className="panel-soft px-4 py-3 text-xs" style={{ color: "var(--danger)" }}>
               {error}
             </div>
           )}
 
           <button
             onClick={handleRunTests}
+            onMouseEnter={() => sound.play("hover")}
             disabled={locked || pendingAction === "tests"}
-            className="hover-lift wood-button mt-auto w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
-            style={{ color: "var(--green)" }}
+            className="btn btn-primary mt-auto w-full py-3"
           >
             {pendingAction === "tests" ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
-                running...
-              </span>
+              <span className="inline-flex items-center gap-2"><span className="spin" /> running</span>
             ) : (
-              "Run Tests"
+              "Run tests"
             )}
           </button>
         </aside>

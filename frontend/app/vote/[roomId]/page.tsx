@@ -3,7 +3,10 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import socket from "@/lib/socket";
+import sound from "@/lib/sound";
 import RoomHeader from "@/components/RoomHeader";
+import Crewmate2D from "@/components/Crewmate2D";
+import { crewColor } from "@/lib/colors";
 
 interface Player {
   color: string;
@@ -15,8 +18,7 @@ function getInitialVoteState() {
   return {
     roomState: socket.getCurrentRoomState(),
     players: (socket.getLastMessage("GameJoined")?.players as Player[] | undefined) ?? [],
-    voteCounts:
-      (socket.getLastMessage("VoteUpdate")?.votes as Record<string, number> | undefined) ?? {},
+    voteCounts: (socket.getLastMessage("VoteUpdate")?.votes as Record<string, number> | undefined) ?? {},
   };
 }
 
@@ -40,17 +42,14 @@ export default function VotePage() {
       router.replace(`/lobby/${roomId}`);
       return;
     }
-
     if (initialState.roomState === "playing" || initialState.roomState === "code_locked") {
       router.replace(`/game/${roomId}`);
       return;
     }
-
     if (initialState.roomState === "meeting") {
       router.replace(`/meeting/${roomId}`);
       return;
     }
-
     if (initialState.roomState === "ended") {
       router.replace(`/results/${roomId}`);
       return;
@@ -60,19 +59,15 @@ export default function VotePage() {
       if (msg.type === "GameJoined") {
         setPlayers(msg.players as Player[]);
       }
-
       if (msg.type === "PlayerJoined" || msg.type === "PlayerLeft") {
         setPlayers(msg.players as Player[]);
       }
-
       if (msg.type === "VoteUpdate") {
         setVoteCounts(msg.votes as Record<string, number>);
       }
-
       if (msg.type === "GameOver") {
         router.push(`/results/${roomId}`);
       }
-
       if (msg.type === "Error") {
         setVotedWallet(null);
         setError(msg.message as string);
@@ -85,6 +80,7 @@ export default function VotePage() {
   function handleVote(player: Player) {
     if (votedWallet) return;
     setVotedWallet(player.wallet);
+    sound.play("vote");
     socket.send({ type: "CastVote", target_wallet: player.wallet });
   }
 
@@ -92,66 +88,50 @@ export default function VotePage() {
     <main className="page-shell">
       <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col gap-6">
         <RoomHeader
-          badge="vote"
-          title="Emergency Vote"
+          badge="emergency vote"
+          title="Eject the Impostor"
           description="you can vote anyone. one vote per wallet."
           roomId={roomId}
-          accent="#ff4444"
-        />
-
-        <div className="space-panel p-5">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <span className="space-title text-xs font-bold" style={{ color: "#ff6666" }}>
-                voting board
-              </span>
-              <p className="text-sm" style={{ color: "var(--muted)" }}>
-                Pick any crewmate. The room tracks the tally live.
-              </p>
-            </div>
-            <div className="wood-chip px-3 py-2 text-xs font-bold uppercase tracking-widest" style={{ color: "#ff6666" }}>
+          accent="var(--danger)"
+          action={
+            <div className="chip" style={{ color: "var(--danger)" }}>
               {votedWallet ? "vote locked" : "vote open"}
             </div>
-          </div>
+          }
+        />
 
+        <div className="panel rise-in p-6">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {players.map((player) => {
               const selected = votedWallet === player.wallet;
-
+              const crew = crewColor(player.color);
               return (
                 <button
                   key={player.wallet}
                   onClick={() => handleVote(player)}
+                  onMouseEnter={() => sound.play("hover")}
                   disabled={votedWallet !== null}
-                  className="hover-lift wood-button flex flex-col gap-4 p-5 text-left disabled:opacity-70"
-                  style={{
-                    color: selected ? "#ff6666" : "var(--text)",
-                    outline: selected ? "2px solid rgba(255, 102, 102, 0.55)" : "none",
-                  }}
+                  className="panel-soft hover-lift pop-in flex flex-col gap-4 p-5 text-left disabled:opacity-80"
+                  style={{ outline: selected ? `2px solid ${crew.base}` : "none" }}
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="crewmate-pill h-12 w-12" style={{ backgroundColor: player.color }} />
+                      <Crewmate2D color={player.color} size={48} className={selected ? "float-soft" : undefined} />
                       <div className="flex flex-col gap-1">
-                        <span className="text-lg font-bold capitalize">{player.color}</span>
-                        <span className="text-xs uppercase tracking-[0.3em]" style={{ color: "var(--muted)" }}>
+                        <span className="title text-xl" style={{ color: crew.base }}>{crew.label}</span>
+                        <span className="text-[10px] uppercase" style={{ color: "var(--muted)", letterSpacing: "0.3em" }}>
                           crewmate
                         </span>
                       </div>
                     </div>
-                    <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+                    <span className="text-xs font-bold uppercase" style={{ color: "var(--muted)" }}>
                       {voteCounts[player.wallet] ?? 0} votes
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm" style={{ color: "var(--muted)" }}>
-                      {formatWallet(player.wallet)}
-                    </span>
-                    <span
-                      className="wood-chip px-3 py-2 text-xs font-bold uppercase tracking-widest"
-                      style={{ color: selected ? "#ff6666" : "var(--green)" }}
-                    >
+                    <span className="font-mono text-sm" style={{ color: "var(--muted)" }}>{formatWallet(player.wallet)}</span>
+                    <span className="chip text-xs uppercase" style={{ color: selected ? crew.base : "var(--accent)" }}>
                       {selected ? "voted" : votedWallet ? "locked" : "vote"}
                     </span>
                   </div>
@@ -162,7 +142,7 @@ export default function VotePage() {
         </div>
 
         {error && (
-          <div className="wood-panel-soft px-4 py-3 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+          <div className="panel-soft px-4 py-3 text-xs" style={{ color: "var(--danger)" }}>
             {error}
           </div>
         )}

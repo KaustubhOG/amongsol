@@ -1,8 +1,12 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import socket from "@/lib/socket";
+import sound from "@/lib/sound";
+import Confetti from "@/components/Confetti";
+import CrewStage from "@/components/three/CrewStage";
+import { crewColor } from "@/lib/colors";
 import { settleStake } from "@/lib/solana";
 
 interface GameOverState {
@@ -49,8 +53,17 @@ export default function ResultsPage() {
   const [settling, setSettling] = useState(false);
   const [settledSignature, setSettledSignature] = useState("");
   const [settleError, setSettleError] = useState("");
+  const playedRef = useRef(false);
+
+  const playOutcome = (winner: string | undefined) => {
+    if (playedRef.current || !winner) return;
+    playedRef.current = true;
+    sound.play(winner === "civilians" ? "win" : "lose");
+  };
 
   useEffect(() => {
+    playOutcome(result?.winner);
+
     const unsub = socket.onMessage((msg) => {
       if (msg.type === "GameJoined") {
         const color = msg.your_color as string;
@@ -60,18 +73,22 @@ export default function ResultsPage() {
       }
 
       if (msg.type === "GameOver") {
+        const winner = msg.winner as string;
         setResult({
-          winner: msg.winner as string,
+          winner,
           impostor_color: msg.impostor_color as string,
           impostor_wallet: msg.impostor_wallet as string,
           payout: msg.payout as GameOverState["payout"],
         });
+        playOutcome(winner);
       }
     });
     return unsub;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleExit() {
+    sound.play("back");
     socket.disconnect();
     router.push("/");
   }
@@ -80,12 +97,16 @@ export default function ResultsPage() {
     if (settling || !result?.payout?.recipients.length) return;
     setSettleError("");
     setSettling(true);
+    sound.unlock();
+    sound.play("click");
 
     try {
       const signature = await settleStake(roomId, result.payout.recipients, stakeProgram);
       setSettledSignature(signature);
+      sound.play("success");
     } catch (err) {
       setSettleError(err instanceof Error ? err.message : "failed to settle payout");
+      sound.play("error");
     } finally {
       setSettling(false);
     }
@@ -93,94 +114,95 @@ export default function ResultsPage() {
 
   const civiliansWon = result?.winner === "civilians";
   const canSettle = isHost && Boolean(result?.payout?.recipients.length) && !settledSignature;
+  const impostor = crewColor(result?.impostor_color);
 
   return (
     <main className="page-shell">
-      <div className="page-frame flex min-h-[calc(100vh-2rem)] items-center justify-center">
-        <section className="space-panel w-full max-w-2xl p-6 text-center sm:p-10">
-          <div className="mb-6 flex flex-col items-center gap-4">
-            <span className="space-title text-xs font-bold" style={{ color: civiliansWon ? "var(--green)" : "#ff6666" }}>
-              {civiliansWon ? "impostor found" : "impostor escaped"}
-            </span>
-            <div
-              className="crewmate-pill flex h-20 w-20 items-center justify-center text-3xl font-bold"
-              style={{ backgroundColor: civiliansWon ? "rgba(20, 241, 149, 0.25)" : "rgba(255, 102, 102, 0.25)" }}
-            >
-              {civiliansWon ? "✓" : "!"}
-            </div>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              {civiliansWon ? "Engineers Won" : "Sabotage Won"}
-            </h1>
-            <p className="max-w-lg text-sm leading-6" style={{ color: "var(--muted)" }}>
-              {result ? `${formatWallet(result.impostor_wallet)} was the impostor.` : "Waiting for the round result."}
-            </p>
-          </div>
+      <div className="page-frame relative flex min-h-[calc(100vh-3rem)] items-center justify-center">
+        {civiliansWon && <Confetti />}
+        <section className="panel pop-in relative z-[3] w-full max-w-2xl overflow-hidden p-7 text-center sm:p-10">
+          <span className="eyebrow" style={{ color: civiliansWon ? "var(--success)" : "var(--impostor)" }}>
+            {civiliansWon ? "impostor ejected" : "impostor escaped"}
+          </span>
 
-          <div className="mb-6 grid gap-3 sm:grid-cols-2">
-            <div className="wood-panel-soft px-4 py-4 text-left">
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
-                result
-              </p>
+          <h1 className="title mt-3 text-5xl sm:text-6xl">
+            <span className="shimmer">{civiliansWon ? "Engineers Win" : "Sabotage Wins"}</span>
+          </h1>
+
+          <CrewStage
+            crew={[{ color: result?.impostor_color ?? "red", spin: true }]}
+            className="mx-auto h-56 w-full max-w-md"
+            cameraZ={5.5}
+          />
+
+          <p className="-mt-2 text-sm leading-6" style={{ color: "var(--muted)" }}>
+            {result ? (
+              <>
+                <span className="font-bold" style={{ color: impostor.base }}>{impostor.label}</span>
+                {" "}({formatWallet(result.impostor_wallet)}) was the impostor.
+              </>
+            ) : (
+              "Waiting for the round result."
+            )}
+          </p>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="panel-soft px-4 py-4 text-left">
+              <p className="eyebrow" style={{ color: "var(--muted)" }}>result</p>
               <p className="mt-2 text-sm leading-6" style={{ color: "var(--muted)" }}>
                 {civiliansWon
-                  ? "The impostor stake is split across the remaining engineers."
-                  : "The impostor receives the full room stake."}
+                  ? "The pot is split across the surviving engineers."
+                  : "The impostor takes the full room stake."}
               </p>
             </div>
-            <div className="wood-panel-soft px-4 py-4 text-left">
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
-                room
-              </p>
-              <p className="mt-2 text-lg font-bold tracking-widest">{roomId}</p>
+            <div className="panel-soft px-4 py-4 text-left">
+              <p className="eyebrow" style={{ color: "var(--muted)" }}>room</p>
+              <p className="mt-2 font-mono text-lg font-bold" style={{ letterSpacing: "0.12em" }}>{roomId}</p>
             </div>
           </div>
 
-          <div className="mb-6 wood-panel-soft px-4 py-4 text-left">
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
-              payout
-            </p>
+          <div className="mt-4 panel-soft px-4 py-4 text-left">
+            <p className="eyebrow" style={{ color: "var(--muted)" }}>payout</p>
             <p className="mt-2 text-sm" style={{ color: "var(--muted)" }}>
-              pot {lamportsToSol(result?.payout?.total_pot_lamports ?? 0)} SOL
+              pot <span style={{ color: "var(--accent)" }}>{lamportsToSol(result?.payout?.total_pot_lamports ?? 0)} SOL</span>
             </p>
             <div className="mt-3 flex flex-col gap-2">
               {(result?.payout?.recipients ?? []).map((recipient) => (
                 <div key={recipient.wallet} className="flex items-center justify-between text-sm">
-                  <span>{formatWallet(recipient.wallet)}</span>
-                  <span style={{ color: "var(--green)" }}>{lamportsToSol(recipient.lamports)} SOL</span>
+                  <span className="font-mono">{formatWallet(recipient.wallet)}</span>
+                  <span style={{ color: "var(--success)" }}>{lamportsToSol(recipient.lamports)} SOL</span>
                 </div>
               ))}
             </div>
           </div>
 
           {isHost ? (
-            <div className="mb-6 flex flex-col gap-2">
+            <div className="mt-6 flex flex-col gap-2">
               <button
                 onClick={handleSettle}
+                onMouseEnter={() => sound.play("hover")}
                 disabled={!canSettle || settling}
-                className="hover-lift wood-button w-full px-8 py-4 text-sm font-bold tracking-[0.25em] uppercase disabled:opacity-50"
-                style={{ color: settledSignature ? "var(--green)" : "#ffcc66" }}
+                className={`btn w-full py-4 ${settledSignature ? "btn-success" : "btn-primary"}`}
               >
-                {settling ? "settling..." : settledSignature ? "payout settled" : "settle payout"}
+                {settling ? (
+                  <span className="inline-flex items-center gap-2"><span className="spin" /> settling</span>
+                ) : settledSignature ? (
+                  "Payout settled"
+                ) : (
+                  "Settle payout"
+                )}
               </button>
               {settledSignature ? (
-                <p className="text-xs" style={{ color: "var(--muted)" }}>
-                  {formatWallet(settledSignature)}
-                </p>
+                <p className="font-mono text-xs" style={{ color: "var(--muted)" }}>{formatWallet(settledSignature)}</p>
               ) : null}
               {settleError ? (
-                <p className="text-xs" style={{ color: "#ff6666" }}>
-                  {settleError}
-                </p>
+                <p className="text-xs" style={{ color: "var(--danger)" }}>{settleError}</p>
               ) : null}
             </div>
           ) : null}
 
-          <button
-            onClick={handleExit}
-            className="hover-lift wood-button w-full px-8 py-4 text-sm font-bold tracking-[0.25em] uppercase"
-            style={{ color: "var(--green)" }}
-          >
-            return home
+          <button onClick={handleExit} onMouseEnter={() => sound.play("hover")} className="btn btn-ghost mt-4 w-full py-4">
+            Return home
           </button>
         </section>
       </div>

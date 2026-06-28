@@ -1,10 +1,17 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import socket from "@/lib/socket";
+import sound from "@/lib/sound";
 import RoomHeader from "@/components/RoomHeader";
+import Crewmate2D from "@/components/Crewmate2D";
+import CrewStage from "@/components/three/CrewStage";
 import { deriveStakeAccounts, lamportsToSol, sendStake } from "@/lib/solana";
+import { crewColor } from "@/lib/colors";
+
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 4;
 
 interface Player {
   color: string;
@@ -40,9 +47,6 @@ function getInitialLobbyState(): LobbyState {
   return { myColor, players, isHost, state, stakeLamports, stakeVault, stakeProgram };
 }
 
-const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 4;
-
 function formatWallet(wallet: string) {
   if (wallet.length <= 10) return wallet;
   return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
@@ -62,6 +66,7 @@ export default function LobbyPage() {
   const [error, setError] = useState("");
   const [starting, setStarting] = useState(false);
   const [staking, setStaking] = useState(false);
+  const playerCountRef = useRef(initialState.players.length);
 
   useEffect(() => {
     let active = true;
@@ -79,7 +84,12 @@ export default function LobbyPage() {
       }
 
       if (msg.type === "PlayerJoined" || msg.type === "PlayerLeft") {
-        setPlayers(msg.players as Player[]);
+        const playerList = msg.players as Player[];
+        if (msg.type === "PlayerJoined" && playerList.length > playerCountRef.current) {
+          sound.play("join");
+        }
+        playerCountRef.current = playerList.length;
+        setPlayers(playerList);
       }
 
       if (msg.type === "StakeUpdated") {
@@ -88,9 +98,11 @@ export default function LobbyPage() {
         setStakeVault(msg.stake_vault as string);
         setStakeProgram((msg.stake_program as string | undefined) ?? "");
         setStaking(false);
+        sound.play("stake");
       }
 
       if (msg.type === "GameStarted") {
+        sound.play("start");
         router.push(`/game/${roomId}`);
       }
 
@@ -110,6 +122,7 @@ export default function LobbyPage() {
         setStarting(false);
         setStaking(false);
         setError(msg.message as string);
+        sound.play("error");
       }
     });
 
@@ -128,6 +141,7 @@ export default function LobbyPage() {
   function handleStart() {
     if (starting) return;
     setStarting(true);
+    sound.play("click");
     socket.send({ type: "StartGame" });
   }
 
@@ -135,6 +149,8 @@ export default function LobbyPage() {
     if (staking) return;
     setError("");
     setStaking(true);
+    sound.unlock();
+    sound.play("click");
 
     try {
       const signature = await sendStake(roomId, stakeLamports, isHost, stakeProgram);
@@ -142,6 +158,7 @@ export default function LobbyPage() {
     } catch (err) {
       setStaking(false);
       setError(err instanceof Error ? err.message : "failed to stake");
+      sound.play("error");
     }
   }
 
@@ -156,79 +173,93 @@ export default function LobbyPage() {
     }
   })();
   const stakeReady = Boolean(stakeProgram && !stakeProgram.startsWith("Set "));
+  const canStart = players.length >= MIN_PLAYERS && allStaked;
 
   return (
     <main className="page-shell">
-      <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col justify-between gap-8">
+      <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col gap-6">
         <RoomHeader
-          badge="amongsol"
-          title="Waiting Room"
+          badge="waiting room"
+          title="Crew Assembly"
           description="bring in enough engineers before the round starts"
           roomId={roomId}
-          accent="var(--green)"
+          accent="var(--accent)"
           action={
-            <div className="wood-panel-soft min-w-56 px-4 py-3 text-sm">
+            <div className="panel-soft flex min-w-56 flex-col gap-2 px-5 py-4 text-sm">
               <div className="flex items-center justify-between">
-                <span style={{ color: "var(--muted)" }}>players</span>
-                <span>{players.length}/{MAX_PLAYERS}</span>
+                <span style={{ color: "var(--muted)" }}>crew</span>
+                <span className="font-bold">{players.length}/{MAX_PLAYERS}</span>
               </div>
-              <div className="mt-2 flex items-center justify-between">
+              <div className="flex items-center justify-between">
                 <span style={{ color: "var(--muted)" }}>host</span>
                 <span>{isHost ? "you" : "assigned"}</span>
               </div>
-              <div className="mt-2 flex items-center justify-between">
+              <div className="flex items-center justify-between">
                 <span style={{ color: "var(--muted)" }}>stake</span>
-                <span>{lamportsToSol(stakeLamports)} SOL</span>
+                <span style={{ color: "var(--accent)" }}>{lamportsToSol(stakeLamports)} SOL</span>
               </div>
             </div>
           }
         />
 
-        <div className="grid flex-1 gap-6 lg:grid-cols-[1.4fr_0.9fr]">
-          <section className="space-panel flex flex-col gap-3 p-4">
-            {players.length === 0 && (
-              <div className="wood-panel-soft px-4 py-6 text-sm" style={{ color: "var(--muted)" }}>
-                waiting for server
-              </div>
-            )}
+        <div className="grid flex-1 gap-6 lg:grid-cols-[1.5fr_0.9fr]">
+          <section className="panel rise-in flex flex-col overflow-hidden">
+            <CrewStage
+              crew={players.length ? players.map((p) => ({ color: p.color })) : [{ color: "blue" }]}
+              className="h-64 w-full"
+              spread={2.2}
+            />
+            <div className="flex flex-col gap-3 p-5">
+              {players.length === 0 && (
+                <div className="panel-soft px-4 py-6 text-sm" style={{ color: "var(--muted)" }}>
+                  waiting for the server
+                </div>
+              )}
 
-            {players.map((player) => (
-              <div
-                key={player.wallet}
-                className="wood-panel-soft grid items-center gap-4 px-4 py-4 sm:grid-cols-[auto_1fr_auto]"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: player.color }} />
-                  <span className="text-sm font-bold">{player.color}</span>
-                </div>
-                <div className="text-sm" style={{ color: player.color === myColor ? "var(--text)" : "var(--muted)" }}>
-                  {player.color === myColor ? "you" : formatWallet(player.wallet)}
-                </div>
-                <div className="text-xs font-bold tracking-widest uppercase" style={{ color: player.is_host ? "var(--green)" : "var(--muted)" }}>
-                  {player.stake_signature ? "staked" : player.is_host ? "host" : "ready"}
-                </div>
-              </div>
-            ))}
+              {players.map((player) => {
+                const crew = crewColor(player.color);
+                return (
+                  <div
+                    key={player.wallet}
+                    className="panel-soft pop-in grid items-center gap-4 px-4 py-3 sm:grid-cols-[auto_1fr_auto]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Crewmate2D color={player.color} size={34} />
+                      <span className="font-bold" style={{ color: crew.base }}>{crew.label}</span>
+                    </div>
+                    <div className="text-sm font-mono" style={{ color: player.color === myColor ? "var(--text)" : "var(--muted)" }}>
+                      {player.color === myColor ? "you" : formatWallet(player.wallet)}
+                    </div>
+                    <div
+                      className="chip text-xs uppercase"
+                      style={{
+                        color: player.stake_signature ? "var(--success)" : player.is_host ? "var(--accent)" : "var(--muted)",
+                      }}
+                    >
+                      {player.stake_signature ? "staked" : player.is_host ? "host" : "ready"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </section>
 
-          <aside className="space-panel flex flex-col gap-4 p-5">
+          <aside className="panel rise-in flex flex-col gap-4 p-6">
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
-                Round Flow
-              </p>
-              <p className="text-sm" style={{ color: "var(--muted)" }}>
-                Edit the contract, run tests, call a meeting if the code smells wrong, then vote out the saboteur.
+              <p className="eyebrow" style={{ color: "var(--muted)" }}>round flow</p>
+              <p className="text-sm leading-6" style={{ color: "var(--muted)" }}>
+                Repair the contract, run tests, call a meeting when the code smells wrong, then vote out the saboteur.
               </p>
             </div>
 
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center justify-between">
-                <span style={{ color: "var(--muted)" }}>minimum players</span>
-                <span>{MIN_PLAYERS}</span>
+                <span style={{ color: "var(--muted)" }}>minimum crew</span>
+                <span className="font-bold">{MIN_PLAYERS}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span style={{ color: "var(--muted)" }}>vault</span>
-                <span>{formatWallet(derivedVault)}</span>
+                <span className="font-mono">{formatWallet(derivedVault)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span style={{ color: "var(--muted)" }}>round time</span>
@@ -236,43 +267,46 @@ export default function LobbyPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span style={{ color: "var(--muted)" }}>code lock</span>
-                <span>30 sec left</span>
+                <span style={{ color: "var(--warn)" }}>30 sec left</span>
               </div>
             </div>
 
             {error && (
-              <div className="wood-panel-soft px-3 py-2 text-xs" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+              <div className="panel-soft px-4 py-3 text-xs" style={{ color: "var(--danger)" }}>
                 {error}
               </div>
             )}
 
             <button
               onClick={handleStake}
+              onMouseEnter={() => sound.play("hover")}
               disabled={staking || hasStaked || !stakeReady}
-              className="hover-lift wood-button w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
-              style={{ color: hasStaked ? "var(--green)" : "#ffcc66" }}
+              className={`btn w-full py-3 ${hasStaked ? "btn-success" : "btn-primary"}`}
             >
-              {staking ? "staking..." : hasStaked ? "stake locked" : `stake ${lamportsToSol(stakeLamports)} SOL`}
+              {staking ? (
+                <span className="inline-flex items-center gap-2"><span className="spin" /> staking</span>
+              ) : hasStaked ? (
+                "Stake locked"
+              ) : (
+                `Stake ${lamportsToSol(stakeLamports)} SOL`
+              )}
             </button>
 
             {isHost ? (
               <button
                 onClick={handleStart}
-                disabled={players.length < MIN_PLAYERS || !allStaked || starting}
-                className="hover-lift wood-button mt-auto w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
-                style={{ color: "var(--green)" }}
+                onMouseEnter={() => sound.play("hover")}
+                disabled={!canStart || starting}
+                className="btn btn-success mt-auto w-full py-3"
               >
                 {starting ? (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
-                    starting...
-                  </span>
+                  <span className="inline-flex items-center gap-2"><span className="spin" /> starting</span>
                 ) : (
-                  "Start Round"
+                  "Start round"
                 )}
               </button>
             ) : (
-              <div className="wood-panel-soft mt-auto px-3 py-2 text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+              <div className="panel-soft mt-auto px-4 py-3 text-center text-xs uppercase" style={{ color: "var(--muted)", letterSpacing: "0.16em" }}>
                 waiting for host
               </div>
             )}

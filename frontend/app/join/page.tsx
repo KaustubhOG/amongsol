@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import socket from "@/lib/socket";
+import sound from "@/lib/sound";
 import { connectSolanaWallet } from "@/lib/solana";
 
 export default function JoinPage() {
@@ -15,34 +16,39 @@ export default function JoinPage() {
     const code = roomCode.trim().toUpperCase();
     if (!code) {
       setError("enter a room code");
+      sound.play("error");
       return;
     }
 
     setLoading(true);
     setError("");
+    sound.unlock();
+    sound.play("click");
 
     try {
       const wallet = await connectSolanaWallet();
       socket.setWallet(wallet);
       await socket.joinGame(code, wallet);
+      sound.play("join");
       router.push(`/lobby/${code}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "failed to join room");
+      sound.play("error");
       setLoading(false);
     }
   }
 
   return (
     <main className="page-shell">
-      <div className="page-frame flex min-h-[calc(100vh-2rem)] items-center justify-center">
-        <section className="space-panel w-full max-w-xl p-6 sm:p-8">
+      <div className="page-frame flex min-h-[calc(100vh-3rem)] items-center justify-center">
+        <section className="panel rise-in w-full max-w-xl p-7 sm:p-9">
           <div className="mb-6 flex flex-col gap-2">
-            <span className="space-title text-xs font-bold" style={{ color: "#ff6666" }}>
+            <span className="eyebrow" style={{ color: "var(--impostor)" }}>
               join game
             </span>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Enter room code</h1>
+            <h1 className="title text-4xl sm:text-5xl">Enter room code</h1>
             <p className="text-sm leading-6" style={{ color: "var(--muted)" }}>
-              The wallet is handled automatically. You only need the room code.
+              Your wallet connects automatically. You only need the room code.
             </p>
           </div>
 
@@ -50,33 +56,46 @@ export default function JoinPage() {
             <input
               value={roomCode}
               onChange={(event) => setRoomCode(event.target.value.toUpperCase())}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") handleJoin();
+              }}
               placeholder="ROOM CODE"
-              className="wood-input w-full px-4 py-4 text-center text-xl font-bold uppercase tracking-[0.35em] outline-none"
+              className="input text-center text-xl font-bold uppercase"
+              style={{ letterSpacing: "0.35em" }}
               spellCheck={false}
               maxLength={12}
             />
 
             <button
               onClick={handleJoin}
+              onMouseEnter={() => sound.play("hover")}
               disabled={loading}
-              className="hover-lift wood-button w-full px-5 py-4 text-sm font-bold tracking-[0.25em] uppercase disabled:opacity-50"
-              style={{ color: "var(--green)" }}
+              className="btn btn-danger w-full py-4 text-base"
             >
               {loading ? (
                 <span className="inline-flex items-center gap-2">
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
-                  joining...
+                  <span className="spin" /> joining
                 </span>
               ) : (
-                "Join Room"
+                "Join room"
               )}
             </button>
 
             {error && (
-              <div className="wood-panel-soft px-4 py-3 text-xs" style={{ borderColor: "#ff4444", color: "#ff6666" }}>
+              <div className="panel-soft px-4 py-3 text-sm" style={{ color: "var(--danger)" }}>
                 {error}
               </div>
             )}
+
+            <button
+              onClick={() => {
+                sound.play("back");
+                router.push("/");
+              }}
+              className="btn btn-ghost w-full"
+            >
+              Back to home
+            </button>
           </div>
         </section>
       </div>
