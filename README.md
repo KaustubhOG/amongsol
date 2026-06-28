@@ -76,7 +76,7 @@ Solana is the financial backbone of every AmongSol game. Rather than keeping sta
 
 | Property | Value |
 |---|---|
-| Program ID | `H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA` |
+| Program ID | `J1EHYJokNcbDGKYk3W8wkpmfAUogjD1NGq1jonPx2CnA` |
 | Network | Solana Devnet |
 | RPC Endpoint | `https://api.devnet.solana.com` |
 | Framework | Anchor |
@@ -195,11 +195,16 @@ anchor build
 anchor deploy --provider.cluster devnet
 ```
 
-After a fresh deploy, the program ID will change. Update the following:
+After a fresh deploy, the program ID will change. Update **all** of the following (the local files and the hosted dashboards are separate — missing one leaves part of the stack pointing at the dead program):
 
-1. `declare_id!` macro in `programs/amongsol_staking/src/lib.rs`
-2. `NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID` in `frontend/.env.local`
-3. `AMONGSOL_STAKING_PROGRAM_ID` in `backend/.env`
+1. `declare_id!` macro in `programs/amongsol_staking/src/lib.rs` (or run `anchor keys sync`)
+2. `[programs.localnet]` / `[programs.devnet]` in `Anchor.toml`
+3. `NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID` in `frontend/.env.local`
+4. `AMONGSOL_STAKING_PROGRAM_ID` in `backend/.env`
+5. `NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID` in the **Vercel** dashboard, then redeploy (build-time variable — see [Deployment](#deployment))
+6. `AMONGSOL_STAKING_PROGRAM_ID` in the **Railway** dashboard, then restart
+
+> The program's **upgrade authority** is the wallet that first deployed it (`~/.config/solana/id.json`). Keep that keypair backed up — without it the program can never be upgraded again and you must deploy a brand-new program ID.
 
 To verify the deployment:
 
@@ -212,7 +217,7 @@ solana program show <new_program_id> --url devnet
 **Frontend** (`frontend/.env.local`):
 
 ```
-NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID=H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA
+NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID=J1EHYJokNcbDGKYk3W8wkpmfAUogjD1NGq1jonPx2CnA
 NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
 NEXT_PUBLIC_BACKEND_URL=https://amongsol-production.up.railway.app
 ```
@@ -221,7 +226,7 @@ NEXT_PUBLIC_BACKEND_URL=https://amongsol-production.up.railway.app
 
 ```
 DATABASE_URL=postgresql://user:password@host:5432/database
-AMONGSOL_STAKING_PROGRAM_ID=H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA
+AMONGSOL_STAKING_PROGRAM_ID=J1EHYJokNcbDGKYk3W8wkpmfAUogjD1NGq1jonPx2CnA
 ```
 
 ---
@@ -431,7 +436,7 @@ Create `backend/.env`:
 
 ```
 DATABASE_URL=postgresql://user:password@localhost:5432/amongsol
-AMONGSOL_STAKING_PROGRAM_ID=H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA
+AMONGSOL_STAKING_PROGRAM_ID=J1EHYJokNcbDGKYk3W8wkpmfAUogjD1NGq1jonPx2CnA
 ```
 
 Start the server:
@@ -453,7 +458,7 @@ cd frontend
 Create `frontend/.env.local`:
 
 ```
-NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID=H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA
+NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID=J1EHYJokNcbDGKYk3W8wkpmfAUogjD1NGq1jonPx2CnA
 NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
 ```
@@ -490,13 +495,17 @@ Each player needs at least 0.1 SOL plus a small buffer for transaction fees (~0.
 4. Add all environment variables from `frontend/.env.local`.
 5. Deploy.
 
+> **Important — after redeploying the staking program (new program ID):** the Vercel dashboard environment variables are separate from your local `frontend/.env.local`. You must update `NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID` in **Vercel → Settings → Environment Variables** to the new program ID, then **trigger a redeploy**. `NEXT_PUBLIC_*` variables are baked in at build time, so an env change does **not** take effect until the project is rebuilt. If the dashboard still points at the old program ID, the live site will keep using the dead program and settlement will fail.
+
 ### Backend (Railway)
 
 1. Create a new Railway project from the GitHub repository.
 2. Set the Root Directory to `backend`.
-3. Add environment variables: `DATABASE_URL` and `AMONGSOL_STAKING_PROGRAM_ID`.
+3. Add environment variables: `DATABASE_URL`, `AMONGSOL_STAKING_PROGRAM_ID`, and `SOLANA_RPC_URL`.
 4. Under Settings, go to Networking and expose port 8080 publicly.
 5. Deploy.
+
+> **Important — after redeploying the staking program:** update `AMONGSOL_STAKING_PROGRAM_ID` in the **Railway** dashboard to the new program ID and restart/redeploy the service. The backend uses it (and `SOLANA_RPC_URL`) to verify stake transactions, so a stale value will reject every stake. Railway reads env vars at startup, so a restart is enough — no rebuild required.
 
 ### Database (Neon)
 
@@ -506,8 +515,7 @@ Provision a serverless PostgreSQL instance on Neon. Copy the connection string a
 
 ## Known Limitations
 
-- The `settle_game` instruction flow is currently being finalized after a recent patch. Stake deposit and game initialization are fully functional.
-- Maximum room size is 4 players.
+- Room size is 2 to 4 players.
 - Round duration is fixed at 3 minutes with no configurable override.
 - Game results persistence requires a live PostgreSQL connection; in-memory sessions are lost on backend restart.
 - Anchor challenges require `solana-program` and related crates available in the compile environment; cold builds on the backend may be slow.

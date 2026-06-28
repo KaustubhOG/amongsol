@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA");
+declare_id!("J1EHYJokNcbDGKYk3W8wkpmfAUogjD1NGq1jonPx2CnA");
 
 #[program]
 pub mod amongsol_staking {
@@ -42,11 +42,13 @@ pub mod amongsol_staking {
         Ok(())
     }
 
-    pub fn settle_game(ctx: Context<SettleGame>, payouts: Vec<Payout>) -> Result<()> {
-        let game = &mut ctx.accounts.game;
-        require!(!game.settled, StakingError::AlreadySettled);
+    pub fn settle_game<'info>(
+        ctx: Context<'_, '_, '_, 'info, SettleGame<'info>>,
+        payouts: Vec<Payout>,
+    ) -> Result<()> {
+        require!(!ctx.accounts.game.settled, StakingError::AlreadySettled);
         require_keys_eq!(
-            game.host,
+            ctx.accounts.game.host,
             ctx.accounts.host.key(),
             StakingError::InvalidHost
         );
@@ -56,13 +58,21 @@ pub mod amongsol_staking {
             .try_fold(0_u64, |acc, payout| acc.checked_add(payout.lamports))
             .ok_or(StakingError::InvalidPayout)?;
         require!(
-            total <= ctx.accounts.vault.to_account_info().lamports(),
+            total <= ctx.accounts.vault.lamports(),
             StakingError::InvalidPayout
         );
         require!(
             payouts.len() == ctx.remaining_accounts.len(),
             StakingError::InvalidPayout
         );
+
+        // The vault is a system-owned PDA, so SOL can only leave it through a
+        // system-program transfer signed by the vault's own seeds. A program
+        // may not directly debit lamports from an account it does not own.
+        let game_key = ctx.accounts.game.key();
+        let vault_bump = ctx.accounts.game.vault_bump;
+        let vault_seeds: &[&[u8]] = &[b"vault", game_key.as_ref(), &[vault_bump]];
+        let signer_seeds: &[&[&[u8]]] = &[vault_seeds];
 
         for (payout, recipient) in payouts.iter().zip(ctx.remaining_accounts.iter()) {
             require_keys_eq!(
@@ -71,15 +81,21 @@ pub mod amongsol_staking {
                 StakingError::InvalidPayout
             );
 
-            **ctx
-                .accounts
-                .vault
-                .to_account_info()
-                .try_borrow_mut_lamports()? -= payout.lamports;
-            **recipient.try_borrow_mut_lamports()? += payout.lamports;
+            let transfer = system_program::Transfer {
+                from: ctx.accounts.vault.to_account_info(),
+                to: recipient.clone(),
+            };
+            system_program::transfer(
+                CpiContext::new_with_signer(
+                    ctx.accounts.system_program.to_account_info(),
+                    transfer,
+                    signer_seeds,
+                ),
+                payout.lamports,
+            )?;
         }
 
-        game.settled = true;
+        ctx.accounts.game.settled = true;
         Ok(())
     }
 }
@@ -123,6 +139,7 @@ pub struct SettleGame<'info> {
     #[account(mut, seeds = [b"vault", game.key().as_ref()], bump = game.vault_bump)]
     pub vault: UncheckedAccount<'info>,
     pub host: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[account]

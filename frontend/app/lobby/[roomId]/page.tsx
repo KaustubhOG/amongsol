@@ -40,6 +40,9 @@ function getInitialLobbyState(): LobbyState {
   return { myColor, players, isHost, state, stakeLamports, stakeVault, stakeProgram };
 }
 
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 4;
+
 function formatWallet(wallet: string) {
   if (wallet.length <= 10) return wallet;
   return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
@@ -167,7 +170,7 @@ export default function LobbyPage() {
             <div className="wood-panel-soft min-w-56 px-4 py-3 text-sm">
               <div className="flex items-center justify-between">
                 <span style={{ color: "var(--muted)" }}>players</span>
-                <span>{players.length}/4</span>
+                <span>{players.length}/{MAX_PLAYERS}</span>
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <span style={{ color: "var(--muted)" }}>host</span>
@@ -221,7 +224,7 @@ export default function LobbyPage() {
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center justify-between">
                 <span style={{ color: "var(--muted)" }}>minimum players</span>
-                <span>4</span>
+                <span>{MIN_PLAYERS}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span style={{ color: "var(--muted)" }}>vault</span>
@@ -255,7 +258,7 @@ export default function LobbyPage() {
             {isHost ? (
               <button
                 onClick={handleStart}
-                disabled={players.length < 4 || !allStaked || starting}
+                disabled={players.length < MIN_PLAYERS || !allStaked || starting}
                 className="hover-lift wood-button mt-auto w-full py-3 text-sm font-bold tracking-widest uppercase disabled:opacity-50"
                 style={{ color: "var(--green)" }}
               >

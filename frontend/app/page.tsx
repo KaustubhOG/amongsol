@@ -58,6 +58,12 @@ export default function Home() {
               </div>
             </button>
           </div>
+
+          <div className="mt-6 wood-panel-soft px-4 py-3 text-center text-xs leading-6" style={{ color: "var(--muted)" }}>
+            <span className="font-bold" style={{ color: "#ffcc66" }}>Heads up:</span> each player needs a different wallet, and Phantom shares one
+            active account across all tabs in the same browser. To play with friends on one machine, have each player join from a
+            <span className="font-bold" style={{ color: "var(--text)" }}> separate browser</span> (or a separate browser profile) so everyone connects as a distinct player.
+          </div>
         </section>
       </div>
     </main>

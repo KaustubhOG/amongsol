@@ -112,6 +112,8 @@ pub struct GameSession {
 
 impl GameSession {
     pub const DEFAULT_STAKE_LAMPORTS: u64 = 100_000_000;
+    pub const MIN_PLAYERS: usize = 2;
+    pub const MAX_PLAYERS: usize = 4;
 
     pub fn new(id: String, map: GameMap) -> Self {
         Self {
@@ -138,7 +140,7 @@ impl GameSession {
         if self.state != GameState::Lobby {
             return Err("game already started".into());
         }
-        if self.players.len() >= 4 {
+        if self.players.len() >= Self::MAX_PLAYERS {
             return Err("game is full".into());
         }
         let color = COLORS[self.players.len()].to_string();

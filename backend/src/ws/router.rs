@@ -3,7 +3,7 @@ use std::sync::atomic::Ordering;
 
 use crate::game::challenges::random_challenge;
 use crate::game::roles::assign_impostor;
-use crate::game::session::{Edit, GameState, WinnerType};
+use crate::game::session::{Edit, GameSession, GameState, WinnerType};
 use crate::game::timer::start_timer;
 use crate::ws::messages::{ClientMessage, EditInfo, FunctionInfo, PlayerInfo, ServerMessage};
 use crate::AppState;
@@ -253,6 +253,29 @@ async fn handle_start_game(conn_id: &str, state: &AppState) {
             conn_id,
             ServerMessage::Error {
                 message: "only host can start the game".to_string(),
+            },
+            state,
+        )
+        .await;
+        return;
+    }
+
+    let player_count = {
+        let session = match state.game_manager.sessions.get(&game_id) {
+            Some(s) => s,
+            None => return,
+        };
+        session.players.len()
+    };
+
+    if player_count < GameSession::MIN_PLAYERS {
+        send_to_conn(
+            conn_id,
+            ServerMessage::Error {
+                message: format!(
+                    "need at least {} players to start",
+                    GameSession::MIN_PLAYERS
+                ),
             },
             state,
         )
@@ -787,7 +810,7 @@ fn stake_vault_address() -> String {
 
 fn stake_program_id() -> String {
     std::env::var("AMONGSOL_STAKING_PROGRAM_ID")
-        .unwrap_or_else(|_| "H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA".to_string())
+        .unwrap_or_else(|_| "J1EHYJokNcbDGKYk3W8wkpmfAUogjD1NGq1jonPx2CnA".to_string())
 }
 
 async fn verify_stake_signature(signature: &str, wallet: &str) -> Result<(), String> {

@@ -17,6 +17,12 @@
 **/.agents/
 **/.codex/
 
+# AI / Claude
+CLAUDE.md
+**/CLAUDE.md
+.claude/
+**/.claude/
+
 # Misc
 .DS_Store
 Thumbs.db

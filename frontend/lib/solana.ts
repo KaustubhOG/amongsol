@@ -4,7 +4,11 @@ type SolanaProvider = {
   isPhantom?: boolean;
   publicKey?: { toString: () => string };
   connect: () => Promise<{ publicKey: { toString: () => string } }>;
-  sendTransaction: (transaction: Transaction, connection: Connection) => Promise<string>;
+  // Injected wallets (Phantom, Solflare, Brave) expose these — NOT the
+  // wallet-adapter-style sendTransaction(tx, connection).
+  signAndSendTransaction?: (transaction: Transaction) => Promise<{ signature: string } | string>;
+  signTransaction?: (transaction: Transaction) => Promise<Transaction>;
+  sendTransaction?: (transaction: Transaction, connection: Connection) => Promise<string>;
 };
 
 declare global {
@@ -16,7 +20,7 @@ declare global {
 const defaultRpcUrl = "https://api.devnet.solana.com";
 const configuredProgramId =
   process.env.NEXT_PUBLIC_AMONGSOL_STAKING_PROGRAM_ID ??
-  "H97Ae97W6cipiGASn27cRaj7ZAddGDnK9pS8qWKXZqTA";
+  "J1EHYJokNcbDGKYk3W8wkpmfAUogjD1NGq1jonPx2CnA";
 const encoder = new TextEncoder();
 const initializeGameDiscriminator = [44, 62, 102, 247, 126, 208, 130, 215];
 const depositStakeDiscriminator = [160, 167, 9, 220, 74, 243, 228, 43];
@@ -28,6 +32,30 @@ export function lamportsToSol(lamports: number) {
 
 function getConnection() {
   return new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? defaultRpcUrl, "confirmed");
+}
+
+// Sends a transaction through whichever method the injected wallet supports.
+// Returns the transaction signature.
+async function signAndSend(
+  provider: SolanaProvider,
+  transaction: Transaction,
+  connection: Connection
+): Promise<string> {
+  if (typeof provider.signAndSendTransaction === "function") {
+    const result = await provider.signAndSendTransaction(transaction);
+    return typeof result === "string" ? result : result.signature;
+  }
+
+  if (typeof provider.signTransaction === "function") {
+    const signed = await provider.signTransaction(transaction);
+    return connection.sendRawTransaction(signed.serialize());
+  }
+
+  if (typeof provider.sendTransaction === "function") {
+    return provider.sendTransaction(transaction, connection);
+  }
+
+  throw new Error("Connected wallet does not support signing transactions");
 }
 
 export async function connectSolanaWallet() {
@@ -116,7 +144,7 @@ export async function sendStake(roomId: string, lamports: number, isHost: boolea
   transaction.feePayer = from;
   transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-  const signature = await provider.sendTransaction(transaction, connection);
+  const signature = await signAndSend(provider, transaction, connection);
   await connection.confirmTransaction(signature, "confirmed");
   return signature;
 }
@@ -148,6 +176,7 @@ export async function settleStake(
         { pubkey: game, isSigner: false, isWritable: true },
         { pubkey: vault, isSigner: false, isWritable: true },
         { pubkey: host, isSigner: true, isWritable: false },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         ...payouts.map((payout) => ({
           pubkey: new PublicKey(payout.wallet),
           isSigner: false,
@@ -161,7 +190,7 @@ export async function settleStake(
   transaction.feePayer = host;
   transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-  const signature = await provider.sendTransaction(transaction, connection);
+  const signature = await signAndSend(provider, transaction, connection);
   await connection.confirmTransaction(signature, "confirmed");
   return signature;
 }
