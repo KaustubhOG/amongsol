@@ -1,5 +1,5 @@
 [build]
-buildCommand = "cargo build --release && mkdir -p bin && cp target/release/amongsol-backend bin/amongsol_backend"
+buildCommand = "rustup install stable && cargo +stable build --release && mkdir -p bin && cp target/release/amongsol-backend bin/amongsol_backend"
 
 [deploy]
 startCommand = "./bin/amongsol_backend"
