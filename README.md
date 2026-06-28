@@ -43,27 +43,37 @@ The game is built on a Rust/Axum WebSocket backend, a Next.js frontend with a Mo
 
 **Home Screen**
 
-<img width="1916" height="967" alt="Screenshot from 2026-06-25 05-33-24" src="https://github.com/user-attachments/assets/2d0d0fc4-5f7d-4756-bd1f-6737a274a58d" />
+<img width="1920" height="1080" alt="Screenshot from 2026-06-29 01-35-20" src="https://github.com/user-attachments/assets/d293e11b-f643-4883-9e37-d7c06012356a" />
+
 
 
 **Create Room**
 
-<img width="1916" height="967" alt="Screenshot from 2026-06-25 05-34-23" src="https://github.com/user-attachments/assets/82a8b145-8c98-4399-b44c-68434a8bb125" />
+<img width="1920" height="1080" alt="Screenshot from 2026-06-29 01-37-22" src="https://github.com/user-attachments/assets/4eaf58fc-c716-4081-9ccf-5e2b4cfe2fb8" />
+
 
 
 **Lobby**
 
-<img width="1916" height="967" alt="Screenshot from 2026-06-25 05-34-51" src="https://github.com/user-attachments/assets/dc48ead1-8963-411b-81ba-6492bbebb22f" />
+<img width="1920" height="1080" alt="Screenshot from 2026-06-29 01-37-37" src="https://github.com/user-attachments/assets/71a96ea0-736b-4409-8518-6c6ef4712634" />
+
 
 
 **Game View**
 
-<img width="1920" height="1080" alt="Screenshot from 2026-06-24 09-30-30" src="https://github.com/user-attachments/assets/6320c3dd-35c8-4427-9618-39d80b063784" />
+<img width="1920" height="1080" alt="Screenshot from 2026-06-29 01-37-58" src="https://github.com/user-attachments/assets/f5f56081-72bd-4342-9ee2-1b32a7e3e575" />
+
+
 
 
 **Meeting and Vote**
+<img width="1920" height="1080" alt="Screenshot from 2026-06-29 01-39-33" src="https://github.com/user-attachments/assets/6248f863-4be0-4697-ab5f-e779bf39ece4" />
 
-<img width="1920" height="1080" alt="Screenshot from 2026-06-24 07-18-18" src="https://github.com/user-attachments/assets/516b0e11-e4a9-4fdc-ae8e-8c4e7dc1e75d" />
+
+**Result**
+<img width="1920" height="1080" alt="Screenshot from 2026-06-29 01-39-41" src="https://github.com/user-attachments/assets/56f37fc7-e061-4cb6-a99d-96079ff4027e" />
+
+
 
 
 ---
