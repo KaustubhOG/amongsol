@@ -64,7 +64,8 @@ The game is built on a Rust/Axum WebSocket backend, a Next.js frontend with a Mo
 
 **Game View**
 
-<img width="1920" height="1080" alt="Screenshot from 2026-06-29 01-37-58" src="https://github.com/user-attachments/assets/f5f56081-72bd-4342-9ee2-1b32a7e3e575" />
+<img width="1906" height="978" alt="Screenshot from 2026-06-30 01-24-41" src="https://github.com/user-attachments/assets/0d194f7a-bb3d-404b-acb0-2ec9582c2d11" />
+
 
 
 
