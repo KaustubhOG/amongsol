@@ -1,14 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import CrewStage from "@/components/three/CrewStage";
+import HeroScene from "@/components/three/HeroScene";
+import LivePlayers from "@/components/LivePlayers";
 import sound from "@/lib/sound";
 
-const heroCrew = [
-  { color: "red" },
-  { color: "blue" },
-  { color: "green" },
-  { color: "yellow" },
+const features = [
+  { label: "On-chain stakes", color: "var(--accent)" },
+  { label: "2 to 4 crew", color: "var(--success)" },
+  { label: "3 minute rounds", color: "var(--warn)" },
+  { label: "Winner takes the pot", color: "var(--impostor)" },
 ];
 
 export default function Home() {
@@ -22,7 +23,7 @@ export default function Home() {
 
   return (
     <main className="page-shell">
-      <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col items-center justify-center gap-8 py-6">
+      <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col items-center justify-center gap-6 py-4">
         <div className="rise-in flex flex-col items-center text-center">
           <span className="eyebrow" style={{ color: "var(--accent)" }}>
             on-chain social deduction
@@ -32,17 +33,40 @@ export default function Home() {
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7" style={{ color: "var(--muted)" }}>
             Board the ship, repair the smart contract, and expose the impostor sabotaging the
-            codebase before the timer runs out. Stakes are locked on-chain and paid to the winners.
+            codebase before the timer runs out. Stakes lock on-chain and pay out to the winners.
           </p>
+          <div className="mt-5">
+            <LivePlayers />
+          </div>
         </div>
 
-        <CrewStage crew={heroCrew} className="h-[300px] w-full max-w-4xl sm:h-[340px]" spread={2.6} />
+        <div className="flex flex-wrap items-center justify-center gap-2.5">
+          {features.map((feature) => (
+            <span key={feature.label} className="feature-chip">
+              <span className="dot" style={{ background: feature.color }} />
+              {feature.label}
+            </span>
+          ))}
+        </div>
+
+        <div className="relative w-full max-w-5xl">
+          <HeroScene className="h-[340px] w-full sm:h-[440px]" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
+            <span className="hint">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 11.5V6a2 2 0 0 1 4 0v5" />
+                <path d="M13 9a2 2 0 0 1 4 0v4a7 7 0 0 1-7 7 7 7 0 0 1-6-3.5L2 14a1.8 1.8 0 0 1 3-2l1 1V7a2 2 0 0 1 4 0" />
+              </svg>
+              tap a crewmate to poke them
+            </span>
+          </div>
+        </div>
 
         <div className="grid w-full max-w-4xl gap-5 md:grid-cols-2">
           <button
             onClick={() => go("/create")}
             onMouseEnter={() => sound.play("hover")}
-            className="panel hover-lift pop-in glow-pulse flex min-h-56 flex-col justify-between p-7 text-left"
+            className="panel hover-lift pop-in flex min-h-52 flex-col justify-between p-7 text-left"
           >
             <div className="flex flex-col gap-2">
               <span className="eyebrow" style={{ color: "var(--accent)" }}>
@@ -59,7 +83,7 @@ export default function Home() {
           <button
             onClick={() => go("/join")}
             onMouseEnter={() => sound.play("hover")}
-            className="panel hover-lift pop-in flex min-h-56 flex-col justify-between p-7 text-left"
+            className="panel hover-lift pop-in flex min-h-52 flex-col justify-between p-7 text-left"
           >
             <div className="flex flex-col gap-2">
               <span className="eyebrow" style={{ color: "var(--impostor)" }}>
@@ -74,12 +98,15 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="panel-soft max-w-4xl px-5 py-4 text-center text-xs leading-6" style={{ color: "var(--muted)" }}>
-          <span className="font-bold" style={{ color: "var(--warn)" }}>Heads up:</span> each player needs a
-          different wallet, and Phantom shares one active account across all tabs in the same browser. To play
-          with friends on one machine, have each player join from a{" "}
-          <span className="font-bold" style={{ color: "var(--text)" }}>separate browser</span> (or a separate
-          browser profile) so everyone connects as a distinct crewmate.
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs" style={{ color: "var(--faint)" }}>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="dot" style={{ width: "0.4rem", height: "0.4rem", borderRadius: "999px", background: "var(--accent)" }} />
+            Solana Devnet
+          </span>
+          <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "var(--faint)" }} />
+          <span>Stakes settle on-chain</span>
+          <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "var(--faint)" }} />
+          <span>2-4 players per room</span>
         </div>
       </div>
     </main>

@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { Stars, ContactShadows, Float } from "@react-three/drei";
 import Crewmate3D from "./Crewmate3D";
 import { useMounted } from "@/lib/useMounted";
+import sound from "@/lib/sound";
 
 export interface StageCrew {
   color: string;
@@ -16,11 +17,12 @@ interface CrewStageProps {
   className?: string;
   cameraZ?: number;
   spread?: number;
+  interactive?: boolean;
 }
 
 // A reusable 3D stage. Mounts only on the client (after the first paint) so the
 // WebGL canvas never runs during server rendering.
-export default function CrewStage({ crew, className, cameraZ = 6.5, spread = 2.4 }: CrewStageProps) {
+export default function CrewStage({ crew, className, cameraZ = 6.5, spread = 2.4, interactive = false }: CrewStageProps) {
   const mounted = useMounted();
 
   if (!mounted) {
@@ -55,6 +57,8 @@ export default function CrewStage({ crew, className, cameraZ = 6.5, spread = 2.4
               spin={member.spin}
               dead={member.dead}
               scale={count > 3 ? 0.82 : 1}
+              interactive={interactive}
+              onPoke={() => sound.pop(index)}
             />
           </Float>
         ))}

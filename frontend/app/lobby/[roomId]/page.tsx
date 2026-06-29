@@ -208,6 +208,7 @@ export default function LobbyPage() {
               crew={players.length ? players.map((p) => ({ color: p.color })) : [{ color: "blue" }]}
               className="h-64 w-full"
               spread={2.2}
+              interactive
             />
             <div className="flex flex-col gap-3 p-5">
               {players.length === 0 && (

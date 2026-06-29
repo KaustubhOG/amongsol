@@ -1,11 +1,12 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import socket from "@/lib/socket";
 import sound from "@/lib/sound";
 import RoomHeader from "@/components/RoomHeader";
 import Crewmate2D from "@/components/Crewmate2D";
+import CodeEditor from "@/components/CodeEditor";
 import { crewColor } from "@/lib/colors";
 
 interface TestResult {
@@ -51,10 +52,6 @@ function getCursorPosition(source: string, selectionStart: number): CursorPositi
   return { line, column, label: `${line}:${column}` };
 }
 
-function getLineNumbers(source: string) {
-  return source.split("\n").map((_, index) => index + 1);
-}
-
 function getInitialGameState() {
   const joined = socket.getLastMessage("GameJoined");
   const started = socket.getLastMessage("GameStarted");
@@ -95,6 +92,24 @@ export default function GamePage() {
   const [error, setError] = useState("");
   const [pendingAction, setPendingAction] = useState<"tests" | "meeting" | null>(null);
   const [cursorByFunction, setCursorByFunction] = useState<Record<string, CursorPosition>>({});
+  const [showWalletTip, setShowWalletTip] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.sessionStorage.getItem("amongsol.walletTipDismissed") !== "1";
+  });
+
+  // Keep a live ref of the roster so the socket handler can resolve a cursor's
+  // wallet without listing `players` in the effect deps (which would tear down
+  // and rebuild the subscription on every roster change, dropping messages).
+  const playersRef = useRef(players);
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
+  function dismissWalletTip() {
+    setShowWalletTip(false);
+    if (typeof window !== "undefined") window.sessionStorage.setItem("amongsol.walletTipDismissed", "1");
+    sound.play("click");
+  }
 
   useEffect(() => {
     if (initialState.roomState === "meeting") {
@@ -152,7 +167,7 @@ export default function GamePage() {
         const color = msg.cursor_color as string;
         const functionName = msg.function_name as string;
         setPlayerStatuses((prev) => {
-          const player = players.find((entry) => entry.color === color);
+          const player = playersRef.current.find((entry) => entry.color === color);
           return {
             ...prev,
             [color]: { color, wallet: player?.wallet ?? "", status: "editing", functionName },
@@ -192,7 +207,7 @@ export default function GamePage() {
     });
 
     return unsub;
-  }, [initialState.roomState, players, roomId, router]);
+  }, [initialState.roomState, roomId, router]);
 
   const visiblePlayers = useMemo(
     () =>
@@ -204,13 +219,15 @@ export default function GamePage() {
     [playerStatuses, players]
   );
 
-  function handleCodeChange(fnName: string, newCode: string, selectionStart?: number) {
+  function handleCodeChange(fnName: string, newCode: string, selectionStart: number) {
     if (locked) return;
     setCode((prev) => ({ ...prev, [fnName]: newCode }));
-    if (typeof selectionStart === "number") {
-      setCursorByFunction((prev) => ({ ...prev, [fnName]: getCursorPosition(newCode, selectionStart) }));
-    }
+    setCursorByFunction((prev) => ({ ...prev, [fnName]: getCursorPosition(newCode, selectionStart) }));
     socket.send({ type: "EditCode", function_name: fnName, code: newCode });
+  }
+
+  function handleCursorMove(fnName: string, selectionStart: number) {
+    setCursorByFunction((prev) => ({ ...prev, [fnName]: getCursorPosition(code[fnName] ?? "", selectionStart) }));
   }
 
   function handleRunTests() {
@@ -237,10 +254,9 @@ export default function GamePage() {
 
   return (
     <main className="page-shell">
-      <div className="page-frame grid min-h-[calc(100vh-3rem)] gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="panel flex min-h-full flex-col overflow-hidden">
-          <RoomHeader
-            badge="code room"
+      <div className="page-frame flex min-h-[calc(100vh-3rem)] flex-col gap-6">
+        <RoomHeader
+          badge="code room"
             title="Repair Bay"
             description="fix the contract, run tests, call a meeting if the code smells wrong"
             roomId={roomId}
@@ -272,9 +288,52 @@ export default function GamePage() {
             }
           />
 
+        {showWalletTip && (
+          <div className="panel-soft rise-in flex items-start gap-3 px-4 py-3 text-xs leading-6" style={{ color: "var(--muted)" }}>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--warn)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mt-0.5 shrink-0"
+              aria-hidden
+            >
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <p className="flex-1">
+              <span className="font-bold" style={{ color: "var(--warn)" }}>Heads up:</span> every crewmate needs a
+              different wallet, and Phantom shares one active account across all tabs in the same browser. To play with
+              friends on one machine, have each player join from a{" "}
+              <span className="font-bold" style={{ color: "var(--text)" }}>separate browser</span> (or browser profile)
+              so everyone connects as a distinct crewmate.
+            </p>
+            <button
+              type="button"
+              onClick={dismissWalletTip}
+              aria-label="Dismiss this note"
+              title="Dismiss"
+              className="shrink-0 rounded-lg p-1 transition hover:bg-white/5"
+              style={{ color: "var(--faint)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        <div className="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <section className="panel flex min-h-0 flex-col overflow-hidden">
           {locked && (
             <div
-              className="alarm-flash mt-4 rounded-xl px-5 py-2 text-center text-xs font-bold uppercase"
+              className="alarm-flash mt-4 mx-4 rounded-xl px-5 py-2 text-center text-xs font-bold uppercase"
               style={{ background: "rgba(255,77,109,0.14)", color: "var(--danger)", letterSpacing: "0.18em" }}
             >
               code locked
@@ -305,7 +364,8 @@ export default function GamePage() {
 
             <div className="flex flex-col gap-5">
               {functions.map((fn) => {
-                const hasRemoteCursor = Object.values(playerStatuses).some((entry) => entry.functionName === fn.name);
+                const remoteCursors = Object.values(playerStatuses).filter((entry) => entry.functionName === fn.name);
+                const hasRemoteCursor = remoteCursors.length > 0;
                 return (
                   <div key={fn.name} className="flex flex-col gap-2">
                     <div className="flex items-center justify-between gap-4">
@@ -323,36 +383,19 @@ export default function GamePage() {
                     </div>
 
                     <div
-                      className="editor-shell"
-                      style={{ borderColor: hasRemoteCursor ? "var(--accent)" : "var(--panel-line)" }}
+                      className="rounded-[14px]"
+                      style={{ outline: hasRemoteCursor ? "1px solid var(--accent)" : "none", outlineOffset: hasRemoteCursor ? "1px" : 0 }}
                     >
-                      <div className="grid grid-cols-[52px_minmax(0,1fr)]">
-                        <div className="editor-gutter select-none px-3 py-4 text-right text-xs leading-6">
-                          {getLineNumbers(code[fn.name] ?? "").slice(0, 120).map((lineNumber) => (
-                            <div key={lineNumber}>{lineNumber}</div>
-                          ))}
-                        </div>
-                        <div className="relative">
-                          <textarea
-                            value={code[fn.name] ?? ""}
-                            onChange={(event) =>
-                              handleCodeChange(fn.name, event.target.value, event.currentTarget.selectionStart ?? undefined)
-                            }
-                            onSelect={(event) =>
-                              handleCodeChange(fn.name, event.currentTarget.value, event.currentTarget.selectionStart ?? undefined)
-                            }
-                            onKeyUp={(event) =>
-                              handleCodeChange(fn.name, event.currentTarget.value, event.currentTarget.selectionStart ?? undefined)
-                            }
-                            disabled={locked}
-                            className="code-area cursor-text min-h-[300px] w-full resize-none bg-transparent p-4 text-sm leading-6 outline-none"
-                            style={{ color: locked ? "var(--muted)" : "var(--text)" }}
-                            spellCheck={false}
-                          />
-                          <div className="pointer-events-none absolute right-3 top-3 flex flex-wrap justify-end gap-2">
-                            {Object.values(playerStatuses)
-                              .filter((entry) => entry.functionName === fn.name)
-                              .map((entry) => (
+                      <CodeEditor
+                        value={code[fn.name] ?? ""}
+                        onChange={(next, sel) => handleCodeChange(fn.name, next, sel)}
+                        onCursor={(sel) => handleCursorMove(fn.name, sel)}
+                        disabled={locked}
+                        minLines={10}
+                        ariaLabel={`Edit ${fn.name}`}
+                        overlay={
+                          hasRemoteCursor
+                            ? remoteCursors.map((entry) => (
                                 <span
                                   key={`${entry.color}-${fn.name}`}
                                   className="chip text-[10px] uppercase"
@@ -360,10 +403,10 @@ export default function GamePage() {
                                 >
                                   {crewColor(entry.color).label} cursor
                                 </span>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
+                              ))
+                            : undefined
+                        }
+                      />
                     </div>
                   </div>
                 );
@@ -444,6 +487,7 @@ export default function GamePage() {
             )}
           </button>
         </aside>
+        </div>
       </div>
     </main>
   );
