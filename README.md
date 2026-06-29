@@ -1,3 +1,6 @@
+#loom video 
+https://www.loom.com/share/45e4181c7cf24fb2bb4f886a9568a738
+
 # AmongSol
 
 AmongSol is a real-time multiplayer social deduction game built for developers. Players join a shared code room, collaboratively write and fix Rust or Solana/Anchor programs, run live tests, and try to identify the hidden impostor sabotaging the codebase before time runs out. Stakes are locked on-chain at the start of every round and distributed automatically to winners through a Solana smart contract.
